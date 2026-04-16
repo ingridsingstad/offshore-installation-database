@@ -38,9 +38,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 .tb-right{display:flex;align-items:center;gap:16px}
 .tb-badge{font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:3px;letter-spacing:.06em}
 .tb-badge-gem{background:#1a2a00;color:#aadd00;border:1px solid #44660033}
+.tb-badge-sodir{background:#001a2a;color:#00c8ff;border:1px solid #003355}
 .tb-badge-cc{background:#001a2e;color:var(--muted);border:1px solid var(--border)}
 .tb-status{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;color:var(--green)}
 .tb-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green);animation:pulse 2.4s ease-in-out infinite}
+.tb-dot-loading{background:var(--amber);box-shadow:0 0 5px var(--amber);animation:spin .7s linear infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 
 /* ══ LAYOUT ═════════════════════════════════════════════════════════════════ */
@@ -60,7 +62,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 .sb-field input:focus,.sb-field select:focus{border-color:var(--accent2)}
 .sb-field input::placeholder{color:var(--muted)}
 
-/* Toggle buttons for offshore/onshore/all */
+/* Toggle buttons */
 .toggle-group{display:flex;gap:4px}
 .toggle-btn{
   flex:1;padding:5px 4px;border:1px solid var(--border);border-radius:4px;
@@ -73,12 +75,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13
 .reset-link{font-family:var(--mono);font-size:9px;color:var(--muted);cursor:pointer;text-transform:uppercase;letter-spacing:.06em;transition:color .15s;display:inline-block;margin-top:2px}
 .reset-link:hover{color:var(--accent)}
 
-/* Stats panel in sidebar */
+/* Stats panel */
 .sb-stat-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 .sb-stat-label{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.04em}
 .sb-stat-val{font-family:var(--mono);font-size:11px;font-weight:700}
 
-/* Country breakdown in sidebar */
+/* Country bars */
 .country-bar-item{margin-bottom:5px}
 .cbi-header{display:flex;justify-content:space-between;margin-bottom:2px}
 .cbi-name{font-size:10px;color:var(--text2)}
@@ -159,6 +161,11 @@ td{padding:8px 12px;vertical-align:middle}
 .f-both{background:#1a0a1a;color:#cc77ff;border:1px solid #440055}
 .f-cond{background:#001a14;color:#33ddaa;border:1px solid #004433}
 
+/* Data-type badge */
+.dt-badge{display:inline-block;padding:1px 5px;border-radius:2px;font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.05em}
+.dt-field{background:#001a2a;color:#4a8fc0;border:1px solid #1a3a5e}
+.dt-inst{background:#1a0030;color:#cc77ff;border:1px solid #550088}
+
 /* Location type dot */
 .loc-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px;flex-shrink:0}
 
@@ -174,7 +181,7 @@ td{padding:8px 12px;vertical-align:middle}
 /* ══ DETAIL PANEL ═══════════════════════════════════════════════════════════ */
 #detail-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center}
 #detail-overlay.open{display:flex}
-#detail-panel{background:var(--surface);border:1px solid var(--border2);border-radius:8px;width:560px;max-width:94vw;max-height:88vh;overflow-y:auto;padding:24px;position:relative}
+#detail-panel{background:var(--surface);border:1px solid var(--border2);border-radius:8px;width:580px;max-width:94vw;max-height:88vh;overflow-y:auto;padding:24px;position:relative}
 .dp-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;transition:color .15s}
 .dp-close:hover{color:#fff}
 .dp-title{font-size:18px;font-weight:700;color:#fff;margin-bottom:4px;padding-right:24px;line-height:1.3}
@@ -198,6 +205,7 @@ td{padding:8px 12px;vertical-align:middle}
 .map-footer{padding:8px 18px;background:var(--surface);border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;align-items:center;flex-shrink:0}
 .leg-item{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9px;color:var(--text2)}
 .leg-dot{width:8px;height:8px;border-radius:50%}
+.leg-sq{width:8px;height:8px;border-radius:2px}
 
 /* ══ FOOTER ══════════════════════════════════════════════════════════════════ */
 #footer{height:26px;min-height:26px;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 18px;flex-shrink:0}
@@ -218,13 +226,14 @@ td{padding:8px 12px;vertical-align:middle}
     <div class="tb-icon">⛽</div>
     <div>
       <div class="tb-title">OIL &amp; GAS EXTRACTION TRACKER</div>
-      <div class="tb-sub">GLOBAL ENERGY MONITOR — MARCH 2026 RELEASE</div>
+      <div class="tb-sub">GLOBAL ENERGY MONITOR · SODIR NORWAY — MARCH 2026</div>
     </div>
   </div>
   <div class="tb-right">
     <span class="tb-badge tb-badge-gem">GEM DATA</span>
+    <span class="tb-badge tb-badge-sodir" id="sodirBadge" style="display:none">SODIR LIVE</span>
     <span class="tb-badge tb-badge-cc">CC BY 4.0</span>
-    <div class="tb-status"><div class="tb-dot"></div><span id="topStatus">LOADING…</span></div>
+    <div class="tb-status"><div class="tb-dot" id="topDot"></div><span id="topStatus">LOADING…</span></div>
   </div>
 </div>
 
@@ -239,14 +248,22 @@ td{padding:8px 12px;vertical-align:middle}
       <div class="sb-label">Filters</div>
       <div class="sb-field">
         <label>Search</label>
-        <input type="text" id="searchInput" placeholder="Field name, operator, basin…" oninput="applyFilters()"/>
+        <input type="text" id="searchInput" placeholder="Name, operator, basin…" oninput="applyFilters()"/>
+      </div>
+      <div class="sb-field">
+        <label>Data Source</label>
+        <div class="toggle-group">
+          <div class="toggle-btn active" id="tog-src-all"    onclick="setDataSource('all')">All</div>
+          <div class="toggle-btn"        id="tog-src-gem"    onclick="setDataSource('gem')">Fields</div>
+          <div class="toggle-btn"        id="tog-src-sodir"  onclick="setDataSource('sodir')">Platforms</div>
+        </div>
       </div>
       <div class="sb-field">
         <label>Location</label>
         <div class="toggle-group">
-          <div class="toggle-btn active" id="tog-all" onclick="setLocation('all')">All</div>
-          <div class="toggle-btn" id="tog-offshore" onclick="setLocation('offshore')">Offshore</div>
-          <div class="toggle-btn" id="tog-onshore" onclick="setLocation('onshore')">Onshore</div>
+          <div class="toggle-btn active" id="tog-all"      onclick="setLocation('all')">All</div>
+          <div class="toggle-btn"        id="tog-offshore" onclick="setLocation('offshore')">Offshore</div>
+          <div class="toggle-btn"        id="tog-onshore"  onclick="setLocation('onshore')">Onshore</div>
         </div>
       </div>
       <div class="sb-field">
@@ -311,8 +328,8 @@ td{padding:8px 12px;vertical-align:middle}
 
     <div id="panel-header">
       <div class="ph-left">
-        <div class="ph-title" id="panelTitle">Global Oil &amp; Gas Fields</div>
-        <div class="ph-sub" id="panelSub">Source: Global Energy Monitor · CC BY 4.0 · March 2026</div>
+        <div class="ph-title" id="panelTitle">Global Oil &amp; Gas Registry</div>
+        <div class="ph-sub" id="panelSub">GEM Fields (CC BY 4.0) + SODIR NCS Installations</div>
       </div>
       <div class="ph-actions">
         <button class="btn btn-ghost" onclick="exportCSV()">CSV Export</button>
@@ -321,7 +338,7 @@ td{padding:8px 12px;vertical-align:middle}
     </div>
 
     <div id="stats-row">
-      <div class="sc"><div class="sc-num c-white" id="st-total">—</div><div class="sc-lbl">Total Fields</div></div>
+      <div class="sc"><div class="sc-num c-white" id="st-total">—</div><div class="sc-lbl">Total Records</div></div>
       <div class="sc"><div class="sc-num c-green" id="st-operating">—</div><div class="sc-lbl">Operating</div></div>
       <div class="sc"><div class="sc-num c-amber" id="st-dev">—</div><div class="sc-lbl">In Development</div></div>
       <div class="sc"><div class="sc-num c-accent" id="st-offshore">—</div><div class="sc-lbl">Offshore</div></div>
@@ -339,20 +356,20 @@ td{padding:8px 12px;vertical-align:middle}
       <!-- ── REGISTRY ── -->
       <div id="tab-registry" class="tab-panel active">
         <div class="result-bar">
-          <div class="result-bar-text">SHOWING <span id="resultCount">—</span> FIELDS</div>
+          <div class="result-bar-text">SHOWING <span id="resultCount">—</span> RECORDS</div>
           <div class="result-bar-text" id="activeFilterLabel" style="color:var(--accent2)"></div>
         </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th onclick="sortBy('installation_name')">Field Name <span class="si" id="sort-installation_name"></span></th>
+                <th onclick="sortBy('installation_name')">Name <span class="si" id="sort-installation_name"></span></th>
                 <th onclick="sortBy('country')">Country <span class="si" id="sort-country"></span></th>
                 <th onclick="sortBy('status')">Status <span class="si" id="sort-status"></span></th>
                 <th onclick="sortBy('fuel_type')">Fuel <span class="si" id="sort-fuel_type"></span></th>
                 <th onclick="sortBy('operator')">Operator <span class="si" id="sort-operator"></span></th>
-                <th onclick="sortBy('year_production_start')">Prod. Start <span class="si" id="sort-year_production_start"></span></th>
-                <th onclick="sortBy('onshore_offshore')">Location <span class="si" id="sort-onshore_offshore"></span></th>
+                <th onclick="sortBy('year_production_start')">Start <span class="si" id="sort-year_production_start"></span></th>
+                <th onclick="sortBy('data_type')">Type <span class="si" id="sort-data_type"></span></th>
               </tr>
             </thead>
             <tbody id="tableBody"></tbody>
@@ -378,6 +395,7 @@ td{padding:8px 12px;vertical-align:middle}
           <div class="leg-item"><div class="leg-dot" style="background:#33aaff"></div>Gas</div>
           <div class="leg-item"><div class="leg-dot" style="background:#cc77ff"></div>Oil &amp; Gas</div>
           <div class="leg-item"><div class="leg-dot" style="background:#33ddaa"></div>Gas &amp; Condensate</div>
+          <div class="leg-item"><div class="leg-sq" style="background:#cc77ff88;border:1px solid #cc77ff"></div>SODIR Platform</div>
           <div class="leg-item" style="margin-left:auto;color:var(--muted);font-size:9px;font-family:var(--mono)" id="mapCount"></div>
         </div>
       </div>
@@ -385,7 +403,7 @@ td{padding:8px 12px;vertical-align:middle}
       <!-- ── ANALYTICS ── -->
       <div id="tab-analytics" class="tab-panel" style="display:none">
         <div style="padding:18px;overflow:auto">
-          <div id="an-section-label" class="sb-label" style="margin-bottom:12px;font-size:10px">Top Countries</div>
+          <div class="sb-label" style="margin-bottom:12px;font-size:10px">Top Countries</div>
           <div id="an-country" style="margin-bottom:24px"></div>
           <div class="sb-label" style="margin-bottom:12px;font-size:10px">Status Distribution</div>
           <div id="an-status" style="margin-bottom:24px;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px"></div>
@@ -400,12 +418,12 @@ td{padding:8px 12px;vertical-align:middle}
 
     <div id="footer">
       <div class="footer-l">
-        SOURCE: GLOBAL ENERGY MONITOR
+        GEM: CC BY 4.0
+        <span class="fsep">|</span>SODIR: © SODIR (OPEN GOVERNMENT DATA)
         <span class="fsep">|</span>MARCH 2026
-        <span class="fsep">|</span>LICENSE: CC BY 4.0
-        <span class="fsep">|</span><span id="footerCount">—</span> RECORDS
+        <span class="fsep">|</span><span id="footerCount">—</span> RECORDS TOTAL
       </div>
-      <div class="footer-r">FOR EDUCATIONAL USE — gem.wiki</div>
+      <div class="footer-r">FOR EDUCATIONAL USE — gem.wiki · sodir.no</div>
     </div>
   </div><!-- /main -->
 </div><!-- /layout -->
@@ -423,11 +441,12 @@ td{padding:8px 12px;vertical-align:middle}
 
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
-let allData = [], filtered = [];
+let gemData = [], sodirData = [], allData = [], filtered = [];
+let sodirLoaded = false;
 let sortCol = 'installation_name', sortDir = 1;
 let page = 0, PAGE_SIZE = 50;
 let mapInited = false, leafletMap, markerLayer;
-let locationFilter = 'all';
+let locationFilter = 'all', dataSourceFilter = 'all';
 
 const FUEL_COLORS = {
   'oil':'#ff9933','gas':'#33aaff','oil and gas':'#cc77ff',
@@ -444,12 +463,32 @@ const STATUS_CLASS = {
 };
 function statusClass(s){ return STATUS_CLASS[(s||'').toLowerCase()] || 's-other'; }
 
-// ── Load data ─────────────────────────────────────────────────────────────────
+// ── Normalize SODIR phase → status ────────────────────────────────────────────
+function normalizeSodirPhase(phase){
+  const p = (phase||'').toUpperCase().trim();
+  if(p==='IN SERVICE') return 'operating';
+  if(['REMOVED','PARTLY REMOVED','ABANDONED IN PLACE','DECOMMISSIONED','DISPOSAL COMPLETED'].includes(p)) return 'abandoned';
+  if(['INSTALLATION','UNDER INSTALLATION','FUTURE','PLANNED'].includes(p)) return 'in-development';
+  if(['SHUT DOWN','LAID UP','INACTIVE'].includes(p)) return 'mothballed';
+  return 'unknown';
+}
+
+// ── Load GEM data ─────────────────────────────────────────────────────────────
 fetch('gem_inventory.json')
   .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
   .then(json=>{
-    allData = json.inventory || [];
-    init();
+    gemData = (json.inventory || []).map(d=>({ ...d, data_type:'field' }));
+    allData = [...gemData];
+    filtered = [...allData];
+    buildCountryFilter();
+    updateStats();
+    buildSidebarCountries();
+    renderTable();
+    document.getElementById('topStatus').textContent =
+      'GEM LOADED — ' + gemData.length.toLocaleString() + ' FIELDS';
+    document.getElementById('footerCount').textContent = allData.length.toLocaleString();
+    // Start SODIR fetch in background
+    fetchSODIR();
   })
   .catch(err=>{
     document.getElementById('tab-registry').innerHTML =
@@ -464,15 +503,99 @@ fetch('gem_inventory.json')
     document.getElementById('topStatus').textContent = 'DATA NOT FOUND';
   });
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-function init(){
-  filtered = [...allData];
-  buildCountryFilter();
-  updateStats();
-  buildSidebarCountries();
-  renderTable();
-  document.getElementById('topStatus').textContent =
-    'LOADED — ' + allData.length.toLocaleString() + ' FIELDS';
+// ── Fetch SODIR installations (live, client-side) ─────────────────────────────
+async function fetchSODIR(){
+  const BASE = 'https://factmaps.sodir.no/api/rest/services/Factmaps/FactMapsWGS84/MapServer/307/query';
+  const dot = document.getElementById('topDot');
+  const statusEl = document.getElementById('topStatus');
+
+  dot.className = 'tb-dot tb-dot-loading';
+  statusEl.style.color = 'var(--amber)';
+  statusEl.textContent = 'SODIR LOADING…';
+
+  const params = {
+    where: '1=1',
+    outFields: 'fclName,fclKind,fclPhase,fclCurrentOperatorName,fclNsdFldsName,fclStartupDate,fclWaterDepth,fclFactPageUrl,fclNationalityName',
+    returnGeometry: 'true',
+    outSR: '4326',
+    f: 'json',
+    resultRecordCount: '1000'
+  };
+
+  let offset = 0, features = [], exceeded = true;
+
+  try {
+    while(exceeded){
+      const qs = new URLSearchParams({ ...params, resultOffset: String(offset) });
+      const r = await fetch(`${BASE}?${qs}`);
+      if(!r.ok) throw new Error('SODIR HTTP ' + r.status);
+      const data = await r.json();
+      if(data.error) throw new Error(data.error.message || 'SODIR API error');
+      if(!data.features || !data.features.length) break;
+      features = features.concat(data.features);
+      exceeded = data.exceededTransferLimit === true;
+      offset += data.features.length;
+    }
+  } catch(e){
+    console.warn('SODIR fetch failed:', e.message);
+    dot.className = 'tb-dot';
+    dot.style.background = 'var(--red)';
+    dot.style.boxShadow = '0 0 5px var(--red)';
+    statusEl.style.color = 'var(--text2)';
+    statusEl.textContent = 'SODIR UNAVAILABLE — ' + gemData.length.toLocaleString() + ' FIELDS';
+    return;
+  }
+
+  // Map SODIR features to shared schema
+  sodirData = features.map(f=>{
+    const a = f.attributes || {};
+    const g = f.geometry;
+    const lat = g ? g.y : null;
+    const lon = g ? g.x : null;
+    const startup = a.fclStartupDate
+      ? String(a.fclStartupDate).replace(/^(\d{4}).*/, '$1')
+      : null;
+    return {
+      installation_name: a.fclName || 'Unknown',
+      country: 'Norway',
+      region: 'Norwegian Continental Shelf',
+      fuel_type: 'oil and gas',
+      production_type: null,
+      status: normalizeSodirPhase(a.fclPhase),
+      operator: a.fclCurrentOperatorName || 'Unknown',
+      onshore_offshore: 'offshore',
+      latitude: lat,
+      longitude: lon,
+      year_production_start: startup ? parseInt(startup) : null,
+      year_discovered: null,
+      basin: a.fclNsdFldsName || null,       // parent field name
+      block: null,
+      owners: null,
+      wiki_url: null,
+      source_authority: 'SODIR',
+      data_type: 'installation',
+      installation_type: a.fclKind || 'Unknown',
+      parent_field: a.fclNsdFldsName || null,
+      water_depth: a.fclWaterDepth || null,
+      fact_page_url: a.fclFactPageUrl || null,
+      id: a.fclName,
+    };
+  });
+
+  sodirLoaded = true;
+  allData = [...gemData, ...sodirData];
+
+  // Rebuild country filter to keep Norway (already there) — just re-render
+  applyFilters();
+
+  dot.className = 'tb-dot';
+  dot.style = '';
+  statusEl.style.color = '';
+  statusEl.textContent =
+    'LOADED — ' + gemData.length.toLocaleString() + ' FIELDS · ' +
+    sodirData.length.toLocaleString() + ' NCS PLATFORMS';
+
+  document.getElementById('sodirBadge').style.display = '';
   document.getElementById('footerCount').textContent = allData.length.toLocaleString();
 }
 
@@ -484,13 +607,12 @@ function updateStats(){
   const offshore = f.filter(d=>d.onshore_offshore==='offshore').length;
   const countries = new Set(f.map(d=>d.country).filter(Boolean)).size;
 
-  set('st-total',   f.length.toLocaleString());
+  set('st-total',     f.length.toLocaleString());
   set('st-operating', operating.toLocaleString());
-  set('st-dev',     dev.toLocaleString());
-  set('st-offshore', offshore.toLocaleString());
+  set('st-dev',       dev.toLocaleString());
+  set('st-offshore',  offshore.toLocaleString());
   set('st-countries', countries);
 
-  // Sidebar live stats
   set('sb-showing',   f.length.toLocaleString());
   set('sb-operating', operating.toLocaleString());
   set('sb-dev',       dev.toLocaleString());
@@ -498,8 +620,8 @@ function updateStats(){
   const withCoords = f.filter(d=>d.latitude&&d.longitude).length;
   set('sb-geo', Math.round(withCoords/Math.max(f.length,1)*100)+'%');
 
-  // Active filter label
   const parts = [];
+  if(dataSourceFilter!=='all') parts.push(dataSourceFilter==='sodir'?'SODIR PLATFORMS':'GEM FIELDS');
   if(locationFilter!=='all') parts.push(locationFilter.toUpperCase());
   const st = document.getElementById('filterStatus').value;
   const fu = document.getElementById('filterFuel').value;
@@ -530,6 +652,8 @@ function buildSidebarCountries(){
 function buildCountryFilter(){
   const countries = [...new Set(allData.map(d=>d.country).filter(Boolean))].sort();
   const sel = document.getElementById('filterCountry');
+  // Remove all non-first options then rebuild
+  while(sel.options.length > 1) sel.remove(1);
   countries.forEach(c=>{ const o=document.createElement('option'); o.value=o.textContent=c; sel.appendChild(o); });
 }
 
@@ -542,6 +666,14 @@ function setLocation(v){
   applyFilters();
 }
 
+function setDataSource(v){
+  dataSourceFilter = v;
+  ['all','gem','sodir'].forEach(x=>{
+    document.getElementById('tog-src-'+x).classList.toggle('active', x===v);
+  });
+  applyFilters();
+}
+
 function applyFilters(){
   const q  = document.getElementById('searchInput').value.toLowerCase();
   const st = document.getElementById('filterStatus').value;
@@ -550,7 +682,9 @@ function applyFilters(){
   const pt = document.getElementById('filterProdType').value;
 
   filtered = allData.filter(d=>{
-    if(q && !`${d.installation_name} ${d.operator} ${d.basin} ${d.block} ${d.country} ${d.region}`.toLowerCase().includes(q)) return false;
+    if(dataSourceFilter==='gem'    && d.data_type!=='field') return false;
+    if(dataSourceFilter==='sodir'  && d.data_type!=='installation') return false;
+    if(q && !`${d.installation_name} ${d.operator} ${d.basin} ${d.block} ${d.country} ${d.region} ${d.installation_type||''}`.toLowerCase().includes(q)) return false;
     if(st && d.status !== st) return false;
     if(fu && d.fuel_type !== fu) return false;
     if(co && d.country !== co) return false;
@@ -573,7 +707,9 @@ function clearFilters(){
   document.getElementById('filterCountry').value='';
   document.getElementById('filterProdType').value='';
   locationFilter='all';
+  dataSourceFilter='all';
   ['all','offshore','onshore'].forEach(x=>document.getElementById('tog-'+x).classList.toggle('active',x==='all'));
+  ['all','gem','sodir'].forEach(x=>document.getElementById('tog-src-'+x).classList.toggle('active',x==='all'));
   applyFilters();
 }
 
@@ -611,21 +747,27 @@ function renderTable(){
       d.fuel_type==='gas and condensate'?'f-cond':'f-both';
     const fuelLabel = (d.fuel_type||'?').toUpperCase();
 
-    const locColor = d.onshore_offshore==='offshore'?'#33aaff':
-      d.onshore_offshore==='onshore'?'#aaa':'#555';
-    const locLabel = d.onshore_offshore ? d.onshore_offshore.toUpperCase() : '—';
+    // Meta line: installation_type for SODIR, basin for GEM
+    const metaText = d.data_type==='installation'
+      ? (d.installation_type||'—')
+      : (d.basin||'—');
+
+    // Type badge
+    const typeBadge = d.data_type==='installation'
+      ? `<span class="dt-badge dt-inst">PLATFORM</span>`
+      : `<span class="dt-badge dt-field">FIELD</span>`;
 
     return `<tr onclick="openDetail(${start+i})">
       <td>
         <div class="f-name" title="${esc(d.installation_name)}">${esc(d.installation_name)}</div>
-        <div class="f-meta">${esc(d.basin||'—')}</div>
+        <div class="f-meta">${esc(metaText)}</div>
       </td>
       <td style="color:var(--text2);white-space:nowrap">${esc(d.country||'—')}</td>
       <td><span class="sbadge ${sc}">${statusDot} ${statusLabel}</span></td>
       <td><span class="fbadge ${fuelCls}">${fuelLabel}</span></td>
       <td style="color:var(--text2);font-size:11px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(d.operator||'—')}</td>
       <td style="font-family:var(--mono);color:var(--muted)">${d.year_production_start||'—'}</td>
-      <td><span class="f-meta" style="color:${locColor}"><span class="loc-dot" style="background:${locColor}"></span>${locLabel}</span></td>
+      <td>${typeBadge}</td>
     </tr>`;
   }).join('');
 
@@ -647,26 +789,46 @@ function openDetail(idx){
   if(!d) return;
   set('dp-title', esc(d.installation_name));
 
-  const sub = [d.country, d.onshore_offshore, d.fuel_type].filter(Boolean)
-    .map(x=>x.toUpperCase()).join('  ·  ');
+  const sub = [d.country, d.data_type==='installation'?'NCS PLATFORM':'FIELD', d.fuel_type]
+    .filter(Boolean).map(x=>x.toUpperCase()).join('  ·  ');
   set('dp-country', sub);
 
-  const fields = [
-    ['Status', `<span class="sbadge ${statusClass(d.status)}">${(d.status||'?').toUpperCase()}</span>`],
-    ['Fuel Type', `<span class="fbadge ${d.fuel_type==='oil'?'f-oil':d.fuel_type==='gas'?'f-gas':d.fuel_type==='gas and condensate'?'f-cond':'f-both'}">${(d.fuel_type||'?').toUpperCase()}</span>`],
-    ['Operator', esc(d.operator||'—')],
-    ['Country', esc(d.country||'—')],
-    ['Region / Province', esc(d.region||'—')],
-    ['Basin', esc(d.basin||'—')],
-    ['Block(s)', esc(d.block||'—')],
-    ['Production Type', esc(d.production_type||'—')],
-    ['Discovery Year', d.year_discovered||'—'],
-    ['Production Start', d.year_production_start||'—'],
-    ['Location', d.onshore_offshore ? d.onshore_offshore.toUpperCase() : '—'],
-    ['Coordinates', d.latitude ? `${d.latitude.toFixed(4)}, ${d.longitude.toFixed(4)}` : '—'],
-    ['GEM Unit ID', `<code style="font-family:var(--mono);font-size:10px;color:var(--muted)">${esc(d.id||'—')}</code>`],
-    ['Wiki', d.wiki_url ? `<a href="${esc(d.wiki_url)}" target="_blank">gem.wiki ↗</a>` : '—'],
-  ];
+  let fields;
+  if(d.data_type==='installation'){
+    // SODIR installation detail
+    fields = [
+      ['Status',            `<span class="sbadge ${statusClass(d.status)}">${(d.status||'?').toUpperCase()}</span>`],
+      ['Installation Type', esc(d.installation_type||'—')],
+      ['Operator',          esc(d.operator||'—')],
+      ['Country / Area',    esc(d.country||'—')],
+      ['Parent Field',      esc(d.parent_field||'—')],
+      ['Water Depth (m)',   d.water_depth!=null ? d.water_depth : '—'],
+      ['Production Start',  d.year_production_start||'—'],
+      ['Offshore / Onshore',d.onshore_offshore ? d.onshore_offshore.toUpperCase() : '—'],
+      ['Coordinates',       d.latitude ? `${d.latitude.toFixed(4)}, ${d.longitude.toFixed(4)}` : '—'],
+      ['Data Source',       '<span class="dt-badge dt-inst">SODIR PLATFORM</span>'],
+      ['SODIR Fact Page',   d.fact_page_url ? `<a href="${esc(d.fact_page_url)}" target="_blank">sodir.no ↗</a>` : '—'],
+      ['Fuel (default)',    `<span class="fbadge f-both">OIL AND GAS</span>`],
+    ];
+  } else {
+    // GEM field detail
+    fields = [
+      ['Status',          `<span class="sbadge ${statusClass(d.status)}">${(d.status||'?').toUpperCase()}</span>`],
+      ['Fuel Type',       `<span class="fbadge ${d.fuel_type==='oil'?'f-oil':d.fuel_type==='gas'?'f-gas':d.fuel_type==='gas and condensate'?'f-cond':'f-both'}">${(d.fuel_type||'?').toUpperCase()}</span>`],
+      ['Operator',        esc(d.operator||'—')],
+      ['Country',         esc(d.country||'—')],
+      ['Region / Province', esc(d.region||'—')],
+      ['Basin',           esc(d.basin||'—')],
+      ['Block(s)',        esc(d.block||'—')],
+      ['Production Type', esc(d.production_type||'—')],
+      ['Discovery Year',  d.year_discovered||'—'],
+      ['Production Start',d.year_production_start||'—'],
+      ['Location',        d.onshore_offshore ? d.onshore_offshore.toUpperCase() : '—'],
+      ['Coordinates',     d.latitude ? `${d.latitude.toFixed(4)}, ${d.longitude.toFixed(4)}` : '—'],
+      ['GEM Unit ID',     `<code style="font-family:var(--mono);font-size:10px;color:var(--muted)">${esc(d.id||'—')}</code>`],
+      ['Wiki',            d.wiki_url ? `<a href="${esc(d.wiki_url)}" target="_blank">gem.wiki ↗</a>` : '—'],
+    ];
+  }
 
   set('dp-grid', fields.map(([label,val])=>`
     <div class="dp-field">
@@ -707,23 +869,34 @@ function renderMapMarkers(){
   const pts = filtered.filter(d=>d.latitude&&d.longitude);
   set('mapCount', pts.length.toLocaleString()+' PLOTTED');
   pts.forEach(d=>{
-    L.circleMarker([d.latitude,d.longitude],{
-      radius:4, fillColor:fuelColor(d.fuel_type), color:'rgba(255,255,255,.2)',
-      weight:.8, fillOpacity:.85
-    }).bindPopup(`
-      <div class="pu-name">${d.installation_name}</div>
+    const isInst = d.data_type === 'installation';
+    const marker = isInst
+      ? L.circleMarker([d.latitude,d.longitude],{
+          radius:5, fillColor:'#cc77ff', color:'rgba(255,255,255,.3)',
+          weight:1, fillOpacity:.9
+        })
+      : L.circleMarker([d.latitude,d.longitude],{
+          radius:4, fillColor:fuelColor(d.fuel_type), color:'rgba(255,255,255,.2)',
+          weight:.8, fillOpacity:.8
+        });
+    const extra = isInst
+      ? `<div class="pu-row">Type: <span>${d.installation_type||'—'}</span></div>
+         <div class="pu-row">Field: <span>${d.parent_field||'—'}</span></div>
+         ${d.water_depth!=null?`<div class="pu-row">Water depth: <span>${d.water_depth} m</span></div>`:''}`
+      : `<div class="pu-row">Fuel: <span>${d.fuel_type||'—'}</span></div>
+         ${d.year_production_start?`<div class="pu-row">Production start: <span>${d.year_production_start}</span></div>`:''}`;
+    marker.bindPopup(`
+      <div class="pu-name">${esc(d.installation_name)}</div>
       <div class="pu-row">Country: <span>${d.country||'—'}</span></div>
       <div class="pu-row">Status: <span>${d.status||'—'}</span></div>
-      <div class="pu-row">Fuel: <span>${d.fuel_type||'—'}</span></div>
       <div class="pu-row">Operator: <span>${d.operator||'—'}</span></div>
-      ${d.year_production_start?`<div class="pu-row">Production start: <span>${d.year_production_start}</span></div>`:''}
+      ${extra}
     `).addTo(markerLayer);
   });
 }
 
 // ── Analytics ─────────────────────────────────────────────────────────────────
 function buildAnalytics(){
-  // Countries bar chart
   const byCo={};
   filtered.forEach(d=>{ if(d.country) byCo[d.country]=(byCo[d.country]||0)+1; });
   const topCo=Object.entries(byCo).sort((a,b)=>b[1]-a[1]).slice(0,20);
@@ -740,10 +913,9 @@ function buildAnalytics(){
       </div>`).join('')}
     </div>`;
 
-  // Status
   const bySt={};
   filtered.forEach(d=>{ const s=d.status||'unknown'; bySt[s]=(bySt[s]||0)+1; });
-  const maxSt=Math.max(...Object.values(bySt));
+  const maxSt=Math.max(...Object.values(bySt),1);
   const stColors={'operating':'#00e676','in-development':'#ffb300','discovered':'#5599ff',
     'mothballed':'#888','decommissioning':'#ff4444','abandoned':'#884444','cancelled':'#884444','exploration':'#5599ff'};
   document.getElementById('an-status').innerHTML=Object.entries(bySt)
@@ -756,10 +928,9 @@ function buildAnalytics(){
       </div>
     </div>`).join('');
 
-  // Fuel
   const byFu={};
   filtered.forEach(d=>{ const f=d.fuel_type||'unknown'; byFu[f]=(byFu[f]||0)+1; });
-  const maxFu=Math.max(...Object.values(byFu));
+  const maxFu=Math.max(...Object.values(byFu),1);
   document.getElementById('an-fuel').innerHTML=Object.entries(byFu)
     .sort((a,b)=>b[1]-a[1])
     .map(([f,n])=>`<div style="background:var(--surface2);border:1px solid var(--border);border-left:2px solid ${fuelColor(f)};border-radius:5px;padding:10px 12px">
@@ -770,11 +941,9 @@ function buildAnalytics(){
       </div>
     </div>`).join('');
 
-  // Operators
   const byOp={};
   filtered.forEach(d=>{ if(d.operator&&d.operator!=='Unknown') byOp[d.operator]=(byOp[d.operator]||0)+1; });
   const topOp=Object.entries(byOp).sort((a,b)=>b[1]-a[1]).slice(0,20);
-  const maxOp=topOp[0]?.[1]||1;
   document.getElementById('an-operators').innerHTML=topOp
     .map(([op,n])=>`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:9px 12px">
       <div style="font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px" title="${esc(op)}">${esc(op)}</div>
@@ -798,19 +967,20 @@ function switchTab(name){
 
 // ── Exports ───────────────────────────────────────────────────────────────────
 function exportCSV(){
-  const cols=['installation_name','country','region','fuel_type','production_type','status',
+  const cols=['installation_name','data_type','country','region','fuel_type','production_type','status',
     'onshore_offshore','operator','year_discovered','year_production_start',
-    'basin','block','latitude','longitude','wiki_url','source_authority'];
+    'basin','block','installation_type','parent_field','water_depth',
+    'latitude','longitude','wiki_url','source_authority'];
   const hdr=cols.join(',');
   const rows=filtered.map(d=>cols.map(c=>{
     const v=d[c]??'';
     return String(v).includes(',')?`"${v}"`:v;
   }).join(','));
-  dl(hdr+'\n'+rows.join('\n'),'text/csv',`gem_oilgas_${new Date().toISOString().slice(0,10)}.csv`);
+  dl(hdr+'\n'+rows.join('\n'),'text/csv',`oilgas_registry_${new Date().toISOString().slice(0,10)}.csv`);
 }
 function exportJSON(){
   dl(JSON.stringify({exported:new Date().toISOString(),count:filtered.length,inventory:filtered},null,2),
-    'application/json',`gem_oilgas_${new Date().toISOString().slice(0,10)}.json`);
+    'application/json',`oilgas_registry_${new Date().toISOString().slice(0,10)}.json`);
 }
 function dl(content,mime,filename){
   const a=document.createElement('a');
