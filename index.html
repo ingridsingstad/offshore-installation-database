@@ -3,349 +3,610 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Global Offshore Installation Database</title>
+<title>RIG EXTRACT — Offshore Installation Registry</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-  :root {
-    --bg: #0a0f1e;
-    --surface: #111827;
-    --surface2: #1a2235;
-    --border: #1e3a5f;
-    --accent: #0ea5e9;
-    --accent2: #38bdf8;
-    --text: #e2e8f0;
-    --muted: #64748b;
-    --norway: #ef4444;
-    --uk: #3b82f6;
-    --denmark: #f59e0b;
-    --netherlands: #f97316;
-    --usa: #8b5cf6;
-    --other: #10b981;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+/* ── Reset & base ──────────────────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:       #07111f;
+  --surface:  #0d1b2e;
+  --surface2: #112035;
+  --surface3: #16283f;
+  --border:   #1a3050;
+  --border2:  #223d5e;
+  --accent:   #00c8ff;
+  --accent2:  #0099cc;
+  --green:    #00e676;
+  --green-bg: #00261a;
+  --green-bd: #00a854;
+  --amber:    #ffb300;
+  --red:      #ff4444;
+  --muted:    #4a6b8a;
+  --text:     #c8ddf0;
+  --text2:    #89aac8;
+  --mono:     'JetBrains Mono','Courier New',monospace;
+  --sans:     'Inter','Segoe UI',system-ui,sans-serif;
+  --sidebar:  260px;
+}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;display:flex;flex-direction:column}
 
-  /* ── Header ── */
-  header {
-    background: linear-gradient(135deg, #0a1628 0%, #0f2040 50%, #071020 100%);
-    border-bottom: 1px solid var(--border);
-    padding: 20px 28px;
-    display: flex; align-items: center; justify-content: space-between;
-    position: sticky; top: 0; z-index: 1000;
-  }
-  .logo { display: flex; align-items: center; gap: 12px; }
-  .logo-icon { width: 40px; height: 40px; background: linear-gradient(135deg, var(--accent), #0369a1); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
-  .logo-text h1 { font-size: 18px; font-weight: 700; letter-spacing: 0.02em; }
-  .logo-text p { font-size: 12px; color: var(--muted); }
-  .header-stats { display: flex; gap: 24px; }
-  .hstat { text-align: right; }
-  .hstat-n { font-size: 22px; font-weight: 700; color: var(--accent2); }
-  .hstat-l { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+/* ── Scrollbar ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--surface)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 
-  /* ── Tabs ── */
-  .tabs { display: flex; gap: 4px; padding: 16px 28px 0; border-bottom: 1px solid var(--border); background: var(--surface); }
-  .tab { padding: 10px 20px; border-radius: 8px 8px 0 0; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--muted); border: 1px solid transparent; border-bottom: none; transition: all .2s; }
-  .tab:hover { color: var(--text); background: var(--surface2); }
-  .tab.active { color: var(--accent2); background: var(--bg); border-color: var(--border); border-bottom-color: var(--bg); }
+/* ══════════════════════════════════════════════════════════════════════════
+   TOP BAR
+══════════════════════════════════════════════════════════════════════════ */
+#topbar{
+  height:48px;min-height:48px;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;z-index:100;flex-shrink:0;
+}
+.tb-brand{
+  display:flex;align-items:center;gap:10px;
+  font-family:var(--mono);font-size:14px;font-weight:700;
+  letter-spacing:.12em;color:#fff;
+}
+.tb-brand-sub{font-size:9px;color:var(--muted);font-weight:400;letter-spacing:.08em;margin-top:1px}
+.tb-icon{
+  width:28px;height:28px;background:linear-gradient(135deg,var(--accent2),#005577);
+  border-radius:4px;display:flex;align-items:center;justify-content:center;
+  font-size:14px;flex-shrink:0;
+}
+.tb-status{
+  display:flex;align-items:center;gap:8px;
+  font-family:var(--mono);font-size:10px;color:var(--green);letter-spacing:.06em;
+}
+.tb-status-dot{
+  width:7px;height:7px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 6px var(--green);animation:pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.tb-right{display:flex;align-items:center;gap:20px}
+.tb-meta{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.05em}
+.tb-meta span{color:var(--text2)}
 
-  /* ── Main ── */
-  main { padding: 24px 28px; }
+/* ══════════════════════════════════════════════════════════════════════════
+   BODY LAYOUT — SIDEBAR + MAIN
+══════════════════════════════════════════════════════════════════════════ */
+#layout{display:flex;flex:1;overflow:hidden}
 
-  /* ── Stats cards ── */
-  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 24px; }
-  .stat-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 16px 20px;
-    display: flex; align-items: center; gap: 14px;
-  }
-  .stat-icon { width: 42px; height: 42px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
-  .stat-num { font-size: 26px; font-weight: 700; line-height: 1; }
-  .stat-label { font-size: 12px; color: var(--muted); margin-top: 3px; }
+/* ── Sidebar ── */
+#sidebar{
+  width:var(--sidebar);min-width:var(--sidebar);
+  background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;
+}
+.sb-section{padding:16px;border-bottom:1px solid var(--border)}
+.sb-label{
+  font-family:var(--mono);font-size:9px;font-weight:700;
+  letter-spacing:.14em;color:var(--muted);text-transform:uppercase;
+  margin-bottom:10px;
+}
+/* Authority cards */
+.auth-card{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:5px;padding:8px 10px;margin-bottom:6px;cursor:pointer;
+  transition:border-color .15s,background .15s;
+  display:flex;align-items:center;gap:8px;
+}
+.auth-card:hover{border-color:var(--accent2);background:var(--surface3)}
+.auth-card.active-filter{border-color:var(--accent);background:#001f33}
+.auth-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.auth-info{flex:1;min-width:0}
+.auth-name{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--text);letter-spacing:.04em}
+.auth-sub{font-size:10px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.auth-count{font-family:var(--mono);font-size:10px;color:var(--accent);font-weight:700}
 
-  /* Country breakdown */
-  .country-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 24px; }
-  .country-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; padding: 12px 16px;
-    border-left: 3px solid var(--accent);
-  }
-  .country-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
-  .country-count { font-size: 22px; font-weight: 700; color: var(--accent2); }
-  .country-bar { height: 4px; border-radius: 2px; background: var(--border); margin-top: 6px; }
-  .country-bar-fill { height: 100%; border-radius: 2px; transition: width .6s ease; }
+/* Filters */
+.sb-field{margin-bottom:8px}
+.sb-field label{display:block;font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.sb-field input,.sb-field select{
+  width:100%;background:var(--bg);border:1px solid var(--border);
+  color:var(--text);border-radius:4px;padding:6px 9px;font-size:12px;
+  font-family:var(--sans);outline:none;transition:border-color .15s;
+  appearance:none;-webkit-appearance:none;
+}
+.sb-field input:focus,.sb-field select:focus{border-color:var(--accent2)}
+.sb-field input::placeholder{color:var(--muted)}
+.reset-link{
+  font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.06em;
+  cursor:pointer;text-decoration:none;display:inline-block;margin-top:4px;
+  text-transform:uppercase;transition:color .15s;
+}
+.reset-link:hover{color:var(--accent)}
 
-  /* ── Filters ── */
-  .filter-bar {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 14px 18px;
-    display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
-    margin-bottom: 16px;
-  }
-  .filter-bar input, .filter-bar select {
-    background: var(--bg); border: 1px solid var(--border);
-    color: var(--text); border-radius: 6px; padding: 8px 12px; font-size: 14px;
-    outline: none; transition: border-color .2s;
-  }
-  .filter-bar input:focus, .filter-bar select:focus { border-color: var(--accent); }
-  .filter-bar input[type=text] { flex: 1; min-width: 200px; }
-  .filter-bar select { min-width: 140px; }
-  .btn {
-    padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500;
-    cursor: pointer; border: 1px solid; transition: all .2s;
-  }
-  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .btn-primary:hover { background: var(--accent2); }
-  .btn-ghost { background: transparent; color: var(--muted); border-color: var(--border); }
-  .btn-ghost:hover { color: var(--text); border-color: var(--accent); }
+/* Sidebar bottom info */
+.sb-info{padding:14px 16px;margin-top:auto;border-top:1px solid var(--border)}
+.sb-info-row{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.04em;margin-bottom:4px}
+.sb-info-row span{color:var(--text2)}
 
-  /* ── Table ── */
-  .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  thead { background: var(--surface2); position: sticky; top: 0; }
-  th {
-    padding: 12px 14px; text-align: left; font-size: 11px; font-weight: 600;
-    text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
-    cursor: pointer; user-select: none; white-space: nowrap;
-    border-bottom: 1px solid var(--border); transition: color .2s;
-  }
-  th:hover { color: var(--accent2); }
-  th.sorted { color: var(--accent2); }
-  th .sort-icon { margin-left: 4px; opacity: .5; }
-  th.sorted .sort-icon { opacity: 1; }
-  tbody tr { border-bottom: 1px solid var(--border); transition: background .15s; }
-  tbody tr:hover { background: var(--surface2); }
-  td { padding: 10px 14px; vertical-align: middle; }
-  td.name { font-weight: 500; color: var(--text); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .badge {
-    display: inline-flex; align-items: center; gap: 4px;
-    padding: 3px 8px; border-radius: 20px; font-size: 11px; font-weight: 600;
-  }
-  .badge-active   { background: #052e16; color: #4ade80; border: 1px solid #166534; }
-  .badge-decomm   { background: #1c1917; color: #a8a29e; border: 1px solid #44403c; }
-  .badge-unknown  { background: #1e1b4b; color: #a5b4fc; border: 1px solid #312e81; }
-  .country-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-  .pager { display: flex; align-items: center; gap: 10px; padding: 14px; justify-content: flex-end; background: var(--surface); border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
-  .pager button { background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 5px; padding: 5px 12px; cursor: pointer; font-size: 13px; }
-  .pager button:disabled { opacity: .4; cursor: not-allowed; }
-  .pager button:not(:disabled):hover { border-color: var(--accent); }
+/* ── Main ── */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
 
-  /* ── Map ── */
-  #map { height: 600px; border-radius: 10px; border: 1px solid var(--border); }
-  .leaflet-popup-content-wrapper { background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 8px; }
-  .leaflet-popup-tip { background: var(--surface2); }
-  .popup-name { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
-  .popup-row { font-size: 12px; color: var(--muted); margin: 2px 0; }
-  .popup-row span { color: var(--text); }
+/* Panel header */
+#panel-header{
+  padding:16px 20px 12px;border-bottom:1px solid var(--border);flex-shrink:0;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:20px;
+}
+.ph-left{}
+.ph-title{font-size:18px;font-weight:700;color:#fff;letter-spacing:.01em;margin-bottom:2px}
+.ph-sub{font-size:11px;color:var(--muted);letter-spacing:.03em}
+.ph-actions{display:flex;gap:8px;flex-shrink:0;align-items:flex-start;padding-top:2px}
+.btn{
+  padding:6px 13px;border-radius:4px;font-size:11px;font-weight:600;
+  cursor:pointer;border:1px solid;transition:all .15s;font-family:var(--mono);
+  letter-spacing:.06em;text-transform:uppercase;
+}
+.btn-outline{background:transparent;color:var(--text2);border-color:var(--border2)}
+.btn-outline:hover{color:var(--accent);border-color:var(--accent);background:#001a2e}
+.btn-accent{background:#001f33;color:var(--accent);border-color:var(--accent2)}
+.btn-accent:hover{background:#003355;border-color:var(--accent)}
 
-  /* ── Loading ── */
-  .loading { display: flex; align-items: center; justify-content: center; min-height: 300px; flex-direction: column; gap: 16px; }
-  .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+/* Stats row */
+#stats-row{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:1px;
+  background:var(--border);border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.stat-cell{
+  background:var(--surface2);padding:12px 16px;
+}
+.stat-cell-num{
+  font-family:var(--mono);font-size:20px;font-weight:700;color:var(--accent);
+  line-height:1;margin-bottom:3px;
+}
+.stat-cell-num.green{color:var(--green)}
+.stat-cell-num.amber{color:var(--amber)}
+.stat-cell-num.white{color:#fff}
+.stat-cell-label{font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
 
-  /* ── Tabs ── */
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
+/* ── Tabs ── */
+#tab-bar{
+  display:flex;gap:0;background:var(--surface);
+  border-bottom:1px solid var(--border);flex-shrink:0;padding:0 20px;
+}
+.tab{
+  padding:10px 16px;cursor:pointer;font-family:var(--mono);font-size:10px;
+  font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+  border-bottom:2px solid transparent;transition:all .15s;margin-bottom:-1px;
+}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-count{
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--surface2);border:1px solid var(--border);border-radius:3px;
+  font-size:9px;padding:1px 5px;margin-left:6px;color:var(--muted);
+}
+.tab.active .tab-count{background:#001a2e;border-color:var(--accent2);color:var(--accent)}
 
-  /* ── Legend ── */
-  .map-legend { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
-  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
-  .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+/* ── Tab panels ── */
+#tab-content{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.tab-panel{display:none;flex:1;overflow:auto}
+.tab-panel.active{display:flex;flex-direction:column}
 
-  /* ── Responsive ── */
-  @media (max-width: 640px) {
-    header { flex-direction: column; gap: 12px; }
-    .header-stats { gap: 16px; }
-    main { padding: 16px; }
-  }
+/* ══════════════════════════════════════════════════════════════════════════
+   REGISTRY TABLE
+══════════════════════════════════════════════════════════════════════════ */
+.result-bar{
+  padding:8px 20px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface2);
+}
+.result-bar-text{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.06em}
+.result-bar-text span{color:var(--text2)}
+.table-wrap{flex:1;overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead{background:var(--surface2);position:sticky;top:0;z-index:10}
+th{
+  padding:9px 14px;text-align:left;font-family:var(--mono);font-size:9px;
+  font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);
+  border-bottom:1px solid var(--border);cursor:pointer;user-select:none;
+  white-space:nowrap;transition:color .15s;
+}
+th:hover{color:var(--accent2)}
+th.sorted{color:var(--accent)}
+th .sort-icon{margin-left:3px;opacity:.4;font-size:8px}
+th.sorted .sort-icon{opacity:1}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:hover{background:var(--surface2)}
+td{padding:9px 14px;vertical-align:middle}
+
+/* Installation cell */
+.inst-name{font-weight:600;color:#fff;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.inst-meta{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px;letter-spacing:.03em}
+.inst-meta .country-sep{color:var(--border2);margin:0 3px}
+
+/* Type/status cell */
+.type-badge{
+  font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.05em;
+  padding:2px 6px;border-radius:3px;background:var(--surface3);
+  border:1px solid var(--border2);color:var(--text2);white-space:nowrap;
+  display:block;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;max-width:140px;
+}
+.status-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 7px;border-radius:3px;font-family:var(--mono);
+  font-size:9px;font-weight:700;letter-spacing:.06em;white-space:nowrap;
+}
+.s-active  {background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
+.s-decomm  {background:#1a1a1a;color:#7a7a7a;border:1px solid #333}
+.s-unknown {background:#0d1a2e;color:#4a8fc0;border:1px solid #1a3a5e}
+
+/* Operator cell */
+.op-name{color:var(--text);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
+.op-year{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px}
+
+/* Source cell */
+.src-link{
+  font-family:var(--mono);font-size:9px;color:var(--accent2);
+  text-decoration:none;letter-spacing:.03em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:120px;
+}
+.src-link:hover{color:var(--accent);text-decoration:underline}
+
+/* Pager */
+.pager{
+  display:flex;align-items:center;gap:10px;padding:10px 20px;
+  justify-content:flex-end;background:var(--surface);
+  border-top:1px solid var(--border);flex-shrink:0;
+}
+.pager-info{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.05em;margin-right:auto}
+.pager-info span{color:var(--text2)}
+.pager-btn{
+  background:var(--surface2);color:var(--text2);border:1px solid var(--border);
+  border-radius:3px;padding:5px 11px;cursor:pointer;font-family:var(--mono);
+  font-size:10px;letter-spacing:.05em;transition:all .15s;
+}
+.pager-btn:disabled{opacity:.3;cursor:not-allowed}
+.pager-btn:not(:disabled):hover{border-color:var(--accent2);color:var(--accent)}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ANALYTICS PANEL
+══════════════════════════════════════════════════════════════════════════ */
+.analytics-wrap{padding:20px;overflow:auto}
+.section-header{
+  font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.12em;
+  color:var(--muted);text-transform:uppercase;margin-bottom:12px;padding-bottom:6px;
+  border-bottom:1px solid var(--border);
+}
+.breakdown-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:24px}
+.bc-card{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:5px;padding:10px 12px;border-left:2px solid var(--accent);
+}
+.bc-country{font-size:11px;font-weight:600;color:var(--text);margin-bottom:3px}
+.bc-count{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--accent);line-height:1}
+.bc-bar{height:3px;background:var(--border);border-radius:2px;margin-top:6px}
+.bc-fill{height:100%;border-radius:2px;transition:width .6s}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MAP
+══════════════════════════════════════════════════════════════════════════ */
+#map{flex:1;min-height:300px}
+.leaflet-popup-content-wrapper{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;box-shadow:0 4px 20px rgba(0,0,0,.6)}
+.leaflet-popup-tip{background:var(--surface2)}
+.popup-name{font-weight:700;font-size:13px;color:#fff;margin-bottom:6px;font-family:var(--mono)}
+.popup-row{font-size:11px;color:var(--muted);margin:2px 0}
+.popup-row span{color:var(--text)}
+.map-legend{
+  padding:10px 20px;background:var(--surface);border-top:1px solid var(--border);
+  display:flex;flex-wrap:wrap;gap:12px;align-items:center;flex-shrink:0;
+}
+.legend-item{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9px;color:var(--text2);letter-spacing:.04em}
+.legend-dot{width:8px;height:8px;border-radius:50%}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   FOOTER
+══════════════════════════════════════════════════════════════════════════ */
+#footer{
+  height:28px;min-height:28px;background:var(--surface);border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;flex-shrink:0;
+}
+.footer-left,.footer-right{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.06em}
+.footer-sep{margin:0 6px;opacity:.3}
+
+/* ── Loading ── */
+.loading{display:flex;align-items:center;justify-content:center;flex:1;flex-direction:column;gap:14px}
+.spinner{width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
 
-<header>
-  <div class="logo">
-    <div class="logo-icon">🛢️</div>
-    <div class="logo-text">
-      <h1>Offshore Installation Database</h1>
-      <p>Global registry · Norway · UK · Denmark · Netherlands · USA</p>
+<!-- ════════════════════════════════════════════════════════ TOP BAR -->
+<div id="topbar">
+  <div class="tb-brand">
+    <div class="tb-icon">⚓</div>
+    <div>
+      <div>RIG EXTRACT</div>
+      <div class="tb-brand-sub">OFFSHORE INSTALLATION REGISTRY</div>
     </div>
   </div>
-  <div class="header-stats">
-    <div class="hstat">
-      <div class="hstat-n" id="hTotal">—</div>
-      <div class="hstat-l">Total installations</div>
-    </div>
-    <div class="hstat">
-      <div class="hstat-n" id="hCountries">—</div>
-      <div class="hstat-l">Countries</div>
+  <div class="tb-right">
+    <div class="tb-meta">REGION <span>NORTHERN EUROPE + USA</span></div>
+    <div class="tb-meta">MODEL <span>V2.4</span></div>
+    <div class="tb-status">
+      <div class="tb-status-dot"></div>
+      <span id="agentStatus">LOADING DATA SOURCES…</span>
     </div>
   </div>
-</header>
-
-<div class="tabs">
-  <div class="tab active" onclick="switchTab('dashboard')">📊 Dashboard</div>
-  <div class="tab" onclick="switchTab('table')">📋 Table</div>
-  <div class="tab" onclick="switchTab('map')">🗺️ Map</div>
 </div>
 
-<main>
-  <!-- ── DASHBOARD ── -->
-  <div id="tab-dashboard" class="tab-panel active">
-    <div id="statsGrid" class="stats-grid"></div>
-    <h3 style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;">Breakdown by country</h3>
-    <div id="countryGrid" class="country-grid"></div>
-    <h3 style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;margin-top:24px;">Installation types (top 10)</h3>
-    <div id="typeGrid" class="country-grid"></div>
+<!-- ════════════════════════════════════════════════════════ LAYOUT -->
+<div id="layout">
+
+  <!-- ══ SIDEBAR ══ -->
+  <div id="sidebar">
+
+    <!-- Data Authorities -->
+    <div class="sb-section">
+      <div class="sb-label">Data Authorities</div>
+      <div id="authCards"></div>
+    </div>
+
+    <!-- Filters -->
+    <div class="sb-section">
+      <div class="sb-label">Filters</div>
+      <div class="sb-field">
+        <label>Search</label>
+        <input type="text" id="searchInput" placeholder="Name, operator, type…" oninput="applyFilters()"/>
+      </div>
+      <div class="sb-field">
+        <label>Country</label>
+        <select id="filterCountry" onchange="applyFilters()">
+          <option value="">All countries</option>
+        </select>
+      </div>
+      <div class="sb-field">
+        <label>Status</label>
+        <select id="filterStatus" onchange="applyFilters()">
+          <option value="">All statuses</option>
+          <option value="Active">Active</option>
+          <option value="Decommissioned">Decommissioned</option>
+          <option value="Inactive/Decommissioned">Inactive / Decommissioned</option>
+          <option value="Unknown">Unknown</option>
+        </select>
+      </div>
+      <div class="sb-field">
+        <label>Type</label>
+        <select id="filterType" onchange="applyFilters()">
+          <option value="">All types</option>
+        </select>
+      </div>
+      <a class="reset-link" onclick="clearFilters()">↺ Reset all</a>
+    </div>
+
+    <!-- Bottom info -->
+    <div class="sb-info">
+      <div class="sb-info-row">LAST SYNC <span id="syncDate">—</span></div>
+      <div class="sb-info-row">RECORDS <span id="sbTotal">—</span></div>
+      <div class="sb-info-row">GEO COVERAGE <span id="sbGeo">—</span></div>
+    </div>
   </div>
 
-  <!-- ── TABLE ── -->
-  <div id="tab-table" class="tab-panel">
-    <div class="filter-bar">
-      <input type="text" id="searchInput" placeholder="🔍  Search by name, country, type…" oninput="applyFilters()"/>
-      <select id="filterCountry" onchange="applyFilters()">
-        <option value="">All countries</option>
-      </select>
-      <select id="filterStatus" onchange="applyFilters()">
-        <option value="">All statuses</option>
-        <option value="Active">Active</option>
-        <option value="Decommissioned">Decommissioned</option>
-        <option value="Inactive/Decommissioned">Inactive / Decommissioned</option>
-        <option value="Unknown">Unknown</option>
-      </select>
-      <select id="filterType" onchange="applyFilters()">
-        <option value="">All types</option>
-      </select>
-      <button class="btn btn-ghost" onclick="clearFilters()">Clear</button>
-      <button class="btn btn-primary" onclick="exportCSV()">⬇ Export CSV</button>
-    </div>
-    <div id="resultCount" style="font-size:12px;color:var(--muted);margin-bottom:10px;"></div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th onclick="sortBy('installation_name')">Name <span class="sort-icon" id="sort-installation_name"></span></th>
-            <th onclick="sortBy('country')">Country <span class="sort-icon" id="sort-country"></span></th>
-            <th onclick="sortBy('region')">Region <span class="sort-icon" id="sort-region"></span></th>
-            <th onclick="sortBy('installation_type')">Type <span class="sort-icon" id="sort-installation_type"></span></th>
-            <th onclick="sortBy('operator')">Operator <span class="sort-icon" id="sort-operator"></span></th>
-            <th onclick="sortBy('status')">Status <span class="sort-icon" id="sort-status"></span></th>
-            <th onclick="sortBy('year_installed')">Year <span class="sort-icon" id="sort-year_installed"></span></th>
-            <th>Source</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-      </table>
-      <div class="pager">
-        <span id="pageInfo"></span>
-        <button id="prevBtn" onclick="prevPage()">← Prev</button>
-        <button id="nextBtn" onclick="nextPage()">Next →</button>
+  <!-- ══ MAIN ══ -->
+  <div id="main">
+
+    <!-- Panel header -->
+    <div id="panel-header">
+      <div class="ph-left">
+        <div class="ph-title">Northern Europe &amp; USA</div>
+        <div class="ph-sub">Verified offshore infrastructure records — SODIR · BSEE · NSTA · ENS · NLOG</div>
+      </div>
+      <div class="ph-actions">
+        <button class="btn btn-outline" onclick="exportCSV()">CSV EXPORT</button>
+        <button class="btn btn-accent" onclick="exportJSON()">JSON EXPORT</button>
       </div>
     </div>
-  </div>
 
-  <!-- ── MAP ── -->
-  <div id="tab-map" class="tab-panel">
-    <div id="map"></div>
-    <div class="map-legend" id="mapLegend"></div>
-  </div>
-</main>
+    <!-- Stats row -->
+    <div id="stats-row">
+      <div class="stat-cell">
+        <div class="stat-cell-num white" id="st-total">—</div>
+        <div class="stat-cell-label">Total Installations</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-cell-num green" id="st-active">—</div>
+        <div class="stat-cell-label">Active Assets</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-cell-num" id="st-countries">—</div>
+        <div class="stat-cell-label">Countries</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-cell-num amber" id="st-sources">—</div>
+        <div class="stat-cell-label">Data Sources</div>
+      </div>
+    </div>
+
+    <!-- Tab bar -->
+    <div id="tab-bar">
+      <div class="tab active" onclick="switchTab('registry')">Registry <span class="tab-count" id="tc-registry">—</span></div>
+      <div class="tab" onclick="switchTab('collection')">Collection Map</div>
+      <div class="tab" onclick="switchTab('analytics')">Analytics</div>
+    </div>
+
+    <!-- Tab content -->
+    <div id="tab-content">
+
+      <!-- ── REGISTRY ── -->
+      <div id="tab-registry" class="tab-panel active">
+        <div class="result-bar">
+          <div class="result-bar-text">SHOWING <span id="resultCount">—</span> INSTALLATIONS</div>
+          <div class="result-bar-text" id="activeFilterLabel"></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th onclick="sortBy('installation_name')">Installation <span class="sort-icon" id="sort-installation_name"></span></th>
+                <th onclick="sortBy('installation_type')">Type / Status <span class="sort-icon" id="sort-installation_type"></span></th>
+                <th onclick="sortBy('operator')">Operator <span class="sort-icon" id="sort-operator"></span></th>
+                <th onclick="sortBy('region')">Region <span class="sort-icon" id="sort-region"></span></th>
+                <th>Primary Source</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+        <div class="pager">
+          <div class="pager-info">PAGE <span id="pageInfo">—</span></div>
+          <button class="pager-btn" id="prevBtn" onclick="prevPage()">← PREV</button>
+          <button class="pager-btn" id="nextBtn" onclick="nextPage()">NEXT →</button>
+        </div>
+      </div>
+
+      <!-- ── MAP ── -->
+      <div id="tab-collection" class="tab-panel" style="display:none;flex-direction:column">
+        <div id="map" style="flex:1"></div>
+        <div class="map-legend" id="mapLegend"></div>
+      </div>
+
+      <!-- ── ANALYTICS ── -->
+      <div id="tab-analytics" class="tab-panel" style="display:none">
+        <div class="analytics-wrap">
+          <div class="section-header">Breakdown by country</div>
+          <div id="countryGrid" class="breakdown-grid"></div>
+          <div class="section-header">Installation types (top 12)</div>
+          <div id="typeGrid" class="breakdown-grid"></div>
+          <div class="section-header">Status distribution</div>
+          <div id="statusGrid" class="breakdown-grid"></div>
+        </div>
+      </div>
+
+    </div><!-- /tab-content -->
+
+    <!-- Footer -->
+    <div id="footer">
+      <div class="footer-left">
+        DATA MODEL V2.4.1
+        <span class="footer-sep">|</span>
+        REGION_LOCK: NOEU+USA
+        <span class="footer-sep">|</span>
+        AGENT_MODE: SOURCE_ONLY
+        <span class="footer-sep">|</span>
+        SOURCES: <span id="footerSources">—</span>
+      </div>
+      <div class="footer-right">© RIG-EXTRACT OFFSHORE SYSTEMS — DATA IS PROVIDED AS-IS FROM REGULATORY AUTHORITIES</div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /layout -->
 
 <script>
-// ── State ──────────────────────────────────────────────────────────────────
-let allData = [];
-let filtered = [];
-let sortCol = 'installation_name';
-let sortDir = 1;
+// ── State ────────────────────────────────────────────────────────────────────
+let allData = [], filtered = [];
+let sortCol = 'installation_name', sortDir = 1;
 let page = 0;
 const PAGE_SIZE = 50;
-let mapInited = false;
-let leafletMap, markerLayer;
+let mapInited = false, leafletMap, markerLayer;
+let activeAuthFilter = null;
+
+const SOURCE_AUTHORITIES = [
+  { key: 'SODIR',       label: 'SODIR (NPD)',      country: 'Norway',         color: '#ef4444', url: 'https://www.sodir.no' },
+  { key: 'NSTA',        label: 'UK NSTA',          country: 'United Kingdom', color: '#3b82f6', url: 'https://www.nstauthority.co.uk' },
+  { key: 'ENS',         label: 'DEA / ENS',        country: 'Denmark',        color: '#f59e0b', url: 'https://ens.dk' },
+  { key: 'NLOG',        label: 'NLOG',             country: 'Netherlands',    color: '#f97316', url: 'https://www.nlog.nl' },
+  { key: 'BSEE',        label: 'BSEE',             country: 'United States',  color: '#8b5cf6', url: 'https://www.bsee.gov' },
+];
 
 const COUNTRY_COLORS = {
-  'Norway': '#ef4444',
-  'United Kingdom': '#3b82f6',
-  'Denmark': '#f59e0b',
-  'Netherlands': '#f97316',
-  'United States': '#8b5cf6',
+  'Norway':'#ef4444','United Kingdom':'#3b82f6','Denmark':'#f59e0b',
+  'Netherlands':'#f97316','United States':'#8b5cf6'
 };
-function countryColor(c) { return COUNTRY_COLORS[c] || '#10b981'; }
+function countryColor(c){ return COUNTRY_COLORS[c] || '#00c8ff'; }
 
-// ── Load data ──────────────────────────────────────────────────────────────
+// ── Load data ────────────────────────────────────────────────────────────────
 fetch('global_offshore_inventory_local.json')
-  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
   .then(json => {
     allData = json.inventory || [];
     init();
   })
   .catch(err => {
-    document.getElementById('tab-dashboard').innerHTML =
-      `<div class="loading"><div style="color:#ef4444;font-size:32px;">⚠️</div>
-       <div style="font-size:16px;font-weight:600;">Could not load data</div>
-       <div style="color:var(--muted);font-size:13px;">Make sure <code>global_offshore_inventory_local.json</code> is in the same folder as this HTML file.</div>
-       <div style="color:var(--muted);font-size:12px;max-width:420px;text-align:center;">Error: ${err.message}</div></div>`;
+    document.getElementById('tab-registry').innerHTML =
+      `<div class="loading">
+        <div style="font-size:32px;color:#ef4444">⚠</div>
+        <div style="font-size:15px;font-weight:700;color:#fff">DATA LOAD FAILURE</div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--muted)">
+          Ensure <code style="color:var(--accent)">global_offshore_inventory_local.json</code> is in the same directory.<br>
+          Error: ${err.message}
+        </div>
+      </div>`;
+    document.getElementById('agentStatus').textContent = 'DATA SOURCE UNAVAILABLE';
   });
 
-// ── Init ───────────────────────────────────────────────────────────────────
+// ── Init ─────────────────────────────────────────────────────────────────────
 function init() {
   filtered = [...allData];
 
-  // Header stats
+  // Top stats
+  const active = allData.filter(d => d.status === 'Active').length;
   const countries = new Set(allData.map(d => d.country)).size;
-  document.getElementById('hTotal').textContent = allData.length.toLocaleString();
-  document.getElementById('hCountries').textContent = countries;
+  const sources = new Set(allData.map(d => d.source_authority).filter(Boolean)).size;
 
-  buildDashboard();
+  document.getElementById('st-total').textContent = allData.length.toLocaleString();
+  document.getElementById('st-active').textContent = active.toLocaleString();
+  document.getElementById('st-countries').textContent = countries;
+  document.getElementById('st-sources').textContent = sources || SOURCE_AUTHORITIES.length;
+
+  // Sidebar bottom
+  document.getElementById('syncDate').textContent = new Date().toISOString().slice(0,10);
+  document.getElementById('sbTotal').textContent = allData.length.toLocaleString();
+  const withCoords = allData.filter(d => d.latitude && d.longitude).length;
+  document.getElementById('sbGeo').textContent = Math.round(withCoords / allData.length * 100) + '%';
+  document.getElementById('footerSources').textContent = sources || SOURCE_AUTHORITIES.length;
+  document.getElementById('agentStatus').textContent = 'REGISTRY SYNCHRONIZED — ' + allData.length.toLocaleString() + ' RECORDS';
+
+  buildAuthCards();
   buildFilterOptions();
+  buildAnalytics();
   renderTable();
 }
 
-// ── Dashboard ──────────────────────────────────────────────────────────────
-function buildDashboard() {
-  const active = allData.filter(d => d.status === 'Active').length;
-  const decomm = allData.filter(d => ['Decommissioned','Inactive/Decommissioned'].includes(d.status)).length;
-  const withCoords = allData.filter(d => d.latitude && d.longitude).length;
-  const countries = [...new Set(allData.map(d => d.country))].length;
+// ── Authority cards ──────────────────────────────────────────────────────────
+function buildAuthCards() {
+  const bySrc = {};
+  allData.forEach(d => {
+    const s = d.source_authority || '';
+    SOURCE_AUTHORITIES.forEach(a => {
+      if (s.includes(a.key)) bySrc[a.key] = (bySrc[a.key] || 0) + 1;
+    });
+    if (!Object.keys(bySrc).length) bySrc['OTHER'] = (bySrc['OTHER'] || 0) + 1;
+  });
 
-  document.getElementById('statsGrid').innerHTML = [
-    { icon: '🛢️', num: allData.length.toLocaleString(), label: 'Total Installations', color: '#0ea5e9' },
-    { icon: '✅', num: active.toLocaleString(), label: 'Active', color: '#22c55e' },
-    { icon: '🔴', num: decomm.toLocaleString(), label: 'Decommissioned / Inactive', color: '#ef4444' },
-    { icon: '🌍', num: countries, label: 'Countries', color: '#a78bfa' },
-    { icon: '📍', num: withCoords.toLocaleString(), label: 'With coordinates', color: '#f59e0b' },
-  ].map(s => `
-    <div class="stat-card">
-      <div class="stat-icon" style="background:${s.color}22;color:${s.color}">${s.icon}</div>
-      <div><div class="stat-num" style="color:${s.color}">${s.num}</div><div class="stat-label">${s.label}</div></div>
-    </div>`).join('');
-
-  // Country breakdown
-  const byCo = {};
-  allData.forEach(d => { byCo[d.country] = (byCo[d.country] || 0) + 1; });
-  const maxCo = Math.max(...Object.values(byCo));
-  document.getElementById('countryGrid').innerHTML = Object.entries(byCo)
-    .sort((a, b) => b[1] - a[1])
-    .map(([c, n]) => `
-      <div class="country-card" style="border-left-color:${countryColor(c)}">
-        <div class="country-name">${c}</div>
-        <div class="country-count" style="color:${countryColor(c)}">${n.toLocaleString()}</div>
-        <div class="country-bar"><div class="country-bar-fill" style="width:${(n/maxCo*100).toFixed(0)}%;background:${countryColor(c)}"></div></div>
-      </div>`).join('');
-
-  // Type breakdown
-  const byType = {};
-  allData.forEach(d => { const t = d.installation_type || 'Unknown'; byType[t] = (byType[t] || 0) + 1; });
-  const maxType = Math.max(...Object.values(byType));
-  document.getElementById('typeGrid').innerHTML = Object.entries(byType)
-    .sort((a, b) => b[1] - a[1]).slice(0, 10)
-    .map(([t, n]) => `
-      <div class="country-card" style="border-left-color:#0ea5e9">
-        <div class="country-name" style="font-size:12px">${t}</div>
-        <div class="country-count">${n.toLocaleString()}</div>
-        <div class="country-bar"><div class="country-bar-fill" style="width:${(n/maxType*100).toFixed(0)}%;background:#0ea5e9"></div></div>
-      </div>`).join('');
+  document.getElementById('authCards').innerHTML = SOURCE_AUTHORITIES.map(a => {
+    const count = bySrc[a.key] || 0;
+    return `<div class="auth-card" id="auth-${a.key}" onclick="filterByAuthority('${a.key}')">
+      <div class="auth-dot" style="background:${a.color}"></div>
+      <div class="auth-info">
+        <div class="auth-name">${a.label}</div>
+        <div class="auth-sub">${a.country}</div>
+      </div>
+      <div class="auth-count">${count || '—'}</div>
+    </div>`;
+  }).join('');
 }
 
-// ── Filters ─────────────────────────────────────────────────────────────────
+function filterByAuthority(key) {
+  if (activeAuthFilter === key) {
+    activeAuthFilter = null;
+    document.querySelectorAll('.auth-card').forEach(c => c.classList.remove('active-filter'));
+  } else {
+    activeAuthFilter = key;
+    document.querySelectorAll('.auth-card').forEach(c => c.classList.remove('active-filter'));
+    document.getElementById('auth-' + key)?.classList.add('active-filter');
+  }
+  applyFilters();
+}
+
+// ── Filters ──────────────────────────────────────────────────────────────────
 function buildFilterOptions() {
   const countries = [...new Set(allData.map(d => d.country))].sort();
   const cSel = document.getElementById('filterCountry');
@@ -353,24 +614,34 @@ function buildFilterOptions() {
 
   const types = [...new Set(allData.map(d => d.installation_type).filter(Boolean))].sort();
   const tSel = document.getElementById('filterType');
-  types.slice(0, 30).forEach(t => { const o = document.createElement('option'); o.value = o.textContent = t; tSel.appendChild(o); });
+  types.slice(0,30).forEach(t => { const o = document.createElement('option'); o.value = o.textContent = t; tSel.appendChild(o); });
 }
 
 function applyFilters() {
-  const q   = document.getElementById('searchInput').value.toLowerCase();
-  const co  = document.getElementById('filterCountry').value;
-  const st  = document.getElementById('filterStatus').value;
-  const ty  = document.getElementById('filterType').value;
+  const q  = document.getElementById('searchInput').value.toLowerCase();
+  const co = document.getElementById('filterCountry').value;
+  const st = document.getElementById('filterStatus').value;
+  const ty = document.getElementById('filterType').value;
 
   filtered = allData.filter(d => {
-    if (q  && !`${d.installation_name} ${d.country} ${d.installation_type} ${d.operator}`.toLowerCase().includes(q)) return false;
+    if (q && !`${d.installation_name} ${d.country} ${d.installation_type} ${d.operator}`.toLowerCase().includes(q)) return false;
     if (co && d.country !== co) return false;
     if (st && d.status !== st) return false;
     if (ty && d.installation_type !== ty) return false;
+    if (activeAuthFilter) {
+      const src = d.source_authority || '';
+      if (!src.includes(activeAuthFilter)) return false;
+    }
     return true;
   });
   page = 0;
   renderTable();
+
+  // Active filter label
+  const filters = [co, st, ty, activeAuthFilter].filter(Boolean);
+  document.getElementById('activeFilterLabel').textContent = filters.length
+    ? 'FILTER: ' + filters.join(' · ')
+    : '';
 }
 
 function clearFilters() {
@@ -378,18 +649,19 @@ function clearFilters() {
   document.getElementById('filterCountry').value = '';
   document.getElementById('filterStatus').value = '';
   document.getElementById('filterType').value = '';
+  activeAuthFilter = null;
+  document.querySelectorAll('.auth-card').forEach(c => c.classList.remove('active-filter'));
   applyFilters();
 }
 
-// ── Sort ───────────────────────────────────────────────────────────────────
+// ── Sort ──────────────────────────────────────────────────────────────────────
 function sortBy(col) {
   if (sortCol === col) sortDir *= -1;
   else { sortCol = col; sortDir = 1; }
   document.querySelectorAll('.sort-icon').forEach(el => el.textContent = '');
   document.querySelectorAll('th').forEach(el => el.classList.remove('sorted'));
   const icon = document.getElementById('sort-' + col);
-  if (icon) { icon.textContent = sortDir === 1 ? ' ↑' : ' ↓'; icon.closest('th').classList.add('sorted'); }
-
+  if (icon) { icon.textContent = sortDir === 1 ? '▲' : '▼'; icon.closest('th').classList.add('sorted'); }
   filtered.sort((a, b) => {
     const av = a[col] ?? '', bv = b[col] ?? '';
     if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * sortDir;
@@ -399,46 +671,164 @@ function sortBy(col) {
   renderTable();
 }
 
-// ── Table render ───────────────────────────────────────────────────────────
+// ── Table render ──────────────────────────────────────────────────────────────
 function renderTable() {
   const start = page * PAGE_SIZE, end = start + PAGE_SIZE;
   const rows = filtered.slice(start, end);
+  const total = filtered.length;
+  const shown = Math.min(end, total);
 
-  document.getElementById('resultCount').textContent =
-    `Showing ${Math.min(end, filtered.length).toLocaleString()} of ${filtered.length.toLocaleString()} installations`;
+  document.getElementById('resultCount').innerHTML = `<span>${shown.toLocaleString()}</span> OF <span>${total.toLocaleString()}</span>`;
+  document.getElementById('tc-registry').textContent = total.toLocaleString();
 
   document.getElementById('tableBody').innerHTML = rows.map(d => {
-    const statusBadge = d.status === 'Active'
-      ? `<span class="badge badge-active">● Active</span>`
-      : ['Decommissioned','Inactive/Decommissioned'].includes(d.status)
-      ? `<span class="badge badge-decomm">○ ${d.status}</span>`
-      : `<span class="badge badge-unknown">? ${d.status || 'Unknown'}</span>`;
+    const typeTrimmed = (d.installation_type || 'UNKNOWN').substring(0, 22).toUpperCase();
+    const statusClass = d.status === 'Active' ? 's-active'
+      : ['Decommissioned','Inactive/Decommissioned'].includes(d.status) ? 's-decomm'
+      : 's-unknown';
+    const statusDot = d.status === 'Active' ? '●' : '○';
+    const statusLabel = d.status === 'Active' ? 'ACTIVE'
+      : d.status === 'Decommissioned' ? 'DECOMM'
+      : d.status === 'Inactive/Decommissioned' ? 'INACTIVE'
+      : 'UNKNOWN';
 
-    const srcLabel = d.source_authority?.replace('Regulator (','').replace(')','') || '—';
+    const srcAuth = d.source_authority || '';
+    const srcKey = SOURCE_AUTHORITIES.find(a => srcAuth.includes(a.key));
+    const srcLabel = srcKey ? srcKey.label : (srcAuth.slice(0,14) || '—');
+    const srcColor = srcKey ? srcKey.color : '#00c8ff';
+
+    const countryCode = {
+      'Norway':'NO','United Kingdom':'GB','Denmark':'DK',
+      'Netherlands':'NL','United States':'US'
+    }[d.country] || d.country?.slice(0,2).toUpperCase() || '??';
 
     return `<tr>
-      <td class="name" title="${esc(d.installation_name)}">${esc(d.installation_name)}</td>
-      <td><span class="country-dot" style="background:${countryColor(d.country)}"></span> ${esc(d.country)}</td>
-      <td style="color:var(--muted);font-size:12px">${esc(d.region)}</td>
-      <td style="font-size:12px">${esc(d.installation_type || '—')}</td>
-      <td style="color:var(--muted);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.operator || '—')}</td>
-      <td>${statusBadge}</td>
-      <td style="color:var(--muted)">${d.year_installed || '—'}</td>
-      <td style="font-size:11px;color:var(--muted)">${esc(srcLabel)}</td>
+      <td>
+        <div class="inst-name" title="${esc(d.installation_name)}">${esc(d.installation_name)}</div>
+        <div class="inst-meta">${countryCode}<span class="country-sep">//</span>${esc(d.region || '—')}</div>
+      </td>
+      <td>
+        <div class="type-badge" title="${esc(d.installation_type)}">${typeTrimmed}</div>
+        <span class="status-badge ${statusClass}">${statusDot} ${statusLabel}</span>
+      </td>
+      <td>
+        <div class="op-name" title="${esc(d.operator)}">${esc(d.operator || '—')}</div>
+        ${d.year_installed ? `<div class="op-year">EST. ${d.year_installed}</div>` : '<div class="op-year">EST. —</div>'}
+      </td>
+      <td style="font-size:11px;color:var(--text2)">${esc(d.region || '—')}</td>
+      <td>
+        <a class="src-link" style="color:${srcColor}" href="${srcKey?.url || '#'}" target="_blank" rel="noopener">${srcLabel}</a>
+      </td>
     </tr>`;
   }).join('');
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  document.getElementById('pageInfo').textContent = `Page ${page + 1} of ${totalPages || 1}`;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  document.getElementById('pageInfo').innerHTML = `<span>${page + 1}</span> / <span>${totalPages || 1}</span>`;
   document.getElementById('prevBtn').disabled = page === 0;
   document.getElementById('nextBtn').disabled = page >= totalPages - 1;
 }
 
-function prevPage() { if (page > 0) { page--; renderTable(); } }
-function nextPage() { if ((page + 1) * PAGE_SIZE < filtered.length) { page++; renderTable(); } }
-function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function prevPage(){ if (page > 0) { page--; renderTable(); } }
+function nextPage(){ if ((page + 1) * PAGE_SIZE < filtered.length) { page++; renderTable(); } }
+function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-// ── Export CSV ─────────────────────────────────────────────────────────────
+// ── Analytics ─────────────────────────────────────────────────────────────────
+function buildAnalytics() {
+  // Country
+  const byCo = {};
+  allData.forEach(d => { byCo[d.country] = (byCo[d.country] || 0) + 1; });
+  const maxCo = Math.max(...Object.values(byCo));
+  document.getElementById('countryGrid').innerHTML = Object.entries(byCo)
+    .sort((a,b) => b[1]-a[1])
+    .map(([c,n]) => `
+      <div class="bc-card" style="border-left-color:${countryColor(c)}">
+        <div class="bc-country">${c}</div>
+        <div class="bc-count" style="color:${countryColor(c)}">${n.toLocaleString()}</div>
+        <div class="bc-bar"><div class="bc-fill" style="width:${(n/maxCo*100).toFixed(0)}%;background:${countryColor(c)}"></div></div>
+      </div>`).join('');
+
+  // Type
+  const byType = {};
+  allData.forEach(d => { const t = d.installation_type || 'Unknown'; byType[t] = (byType[t]||0)+1; });
+  const maxType = Math.max(...Object.values(byType));
+  document.getElementById('typeGrid').innerHTML = Object.entries(byType)
+    .sort((a,b) => b[1]-a[1]).slice(0,12)
+    .map(([t,n]) => `
+      <div class="bc-card" style="border-left-color:var(--accent2)">
+        <div class="bc-country" style="font-size:10px">${t}</div>
+        <div class="bc-count">${n.toLocaleString()}</div>
+        <div class="bc-bar"><div class="bc-fill" style="width:${(n/maxType*100).toFixed(0)}%;background:var(--accent2)"></div></div>
+      </div>`).join('');
+
+  // Status
+  const bySt = {};
+  allData.forEach(d => { const s = d.status || 'Unknown'; bySt[s] = (bySt[s]||0)+1; });
+  const maxSt = Math.max(...Object.values(bySt));
+  const stColors = {'Active':'#00e676','Decommissioned':'#666','Inactive/Decommissioned':'#888','Unknown':'#3a6a8a'};
+  document.getElementById('statusGrid').innerHTML = Object.entries(bySt)
+    .sort((a,b) => b[1]-a[1])
+    .map(([s,n]) => `
+      <div class="bc-card" style="border-left-color:${stColors[s]||'#aaa'}">
+        <div class="bc-country">${s}</div>
+        <div class="bc-count" style="color:${stColors[s]||'#aaa'}">${n.toLocaleString()}</div>
+        <div class="bc-bar"><div class="bc-fill" style="width:${(n/maxSt*100).toFixed(0)}%;background:${stColors[s]||'#aaa'}"></div></div>
+      </div>`).join('');
+}
+
+// ── Map ──────────────────────────────────────────────────────────────────────
+function initMap() {
+  if (mapInited) return;
+  mapInited = true;
+
+  leafletMap = L.map('map', { preferCanvas: true }).setView([55, 5], 4);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CARTO', subdomains: 'abcd', maxZoom: 19
+  }).addTo(leafletMap);
+
+  markerLayer = L.layerGroup().addTo(leafletMap);
+  renderMapMarkers();
+
+  const countries = [...new Set(allData.map(d => d.country))];
+  document.getElementById('mapLegend').innerHTML =
+    countries.map(c => `<div class="legend-item"><div class="legend-dot" style="background:${countryColor(c)}"></div>${c}</div>`).join('') +
+    `<div class="legend-item" style="margin-left:auto;color:var(--muted);font-size:9px">
+      ${allData.filter(d=>d.latitude&&d.longitude).length.toLocaleString()} INSTALLATIONS WITH COORDINATES
+    </div>`;
+}
+
+function renderMapMarkers() {
+  if (!markerLayer) return;
+  markerLayer.clearLayers();
+  allData.filter(d => d.latitude && d.longitude).forEach(d => {
+    const col = countryColor(d.country);
+    L.circleMarker([d.latitude, d.longitude], {
+      radius: 4, fillColor: col, color: 'rgba(255,255,255,0.3)',
+      weight: 0.8, fillOpacity: 0.9
+    }).bindPopup(`
+      <div class="popup-name">${d.installation_name}</div>
+      <div class="popup-row">Country: <span>${d.country}</span></div>
+      <div class="popup-row">Type: <span>${d.installation_type || '—'}</span></div>
+      <div class="popup-row">Status: <span>${d.status || '—'}</span></div>
+      <div class="popup-row">Operator: <span>${d.operator || '—'}</span></div>
+      ${d.year_installed ? `<div class="popup-row">Installed: <span>${d.year_installed}</span></div>` : ''}
+    `).addTo(markerLayer);
+  });
+}
+
+// ── Tab switching ────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', ['registry','collection','analytics'][i] === name);
+  });
+  ['registry','collection','analytics'].forEach(n => {
+    const el = document.getElementById('tab-' + n);
+    if (n === name) { el.classList.add('active'); el.style.display = 'flex'; }
+    else { el.classList.remove('active'); el.style.display = 'none'; }
+  });
+  if (name === 'collection') setTimeout(initMap, 50);
+}
+
+// ── Exports ──────────────────────────────────────────────────────────────────
 function exportCSV() {
   const cols = ['installation_name','country','region','installation_type','operator','status','year_installed','latitude','longitude','source_authority'];
   const header = cols.join(',');
@@ -446,66 +836,19 @@ function exportCSV() {
     const v = d[c] ?? '';
     return String(v).includes(',') ? `"${v}"` : v;
   }).join(','));
-  const blob = new Blob([header + '\n' + rows.join('\n')], { type: 'text/csv' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = `offshore_installations_${new Date().toISOString().slice(0,10)}.csv`;
+  download(header + '\n' + rows.join('\n'), 'text/csv', `rig-extract_${new Date().toISOString().slice(0,10)}.csv`);
+}
+
+function exportJSON() {
+  download(JSON.stringify({ exported: new Date().toISOString(), count: filtered.length, inventory: filtered }, null, 2),
+    'application/json', `rig-extract_${new Date().toISOString().slice(0,10)}.json`);
+}
+
+function download(content, mime, filename) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type: mime }));
+  a.download = filename;
   a.click();
-}
-
-// ── Map ────────────────────────────────────────────────────────────────────
-function initMap() {
-  if (mapInited) return;
-  mapInited = true;
-
-  leafletMap = L.map('map', { preferCanvas: true }).setView([55, 5], 4);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap © CARTO',
-    subdomains: 'abcd', maxZoom: 19
-  }).addTo(leafletMap);
-
-  markerLayer = L.layerGroup().addTo(leafletMap);
-  renderMapMarkers();
-
-  // Legend
-  const countries = [...new Set(allData.map(d => d.country))];
-  document.getElementById('mapLegend').innerHTML =
-    countries.map(c => `<div class="legend-item"><div class="legend-dot" style="background:${countryColor(c)}"></div>${c}</div>`).join('') +
-    '<div class="legend-item" style="margin-left:auto;color:var(--muted);font-size:11px">Only installations with coordinates shown</div>';
-}
-
-function renderMapMarkers() {
-  if (!markerLayer) return;
-  markerLayer.clearLayers();
-  const withCoords = allData.filter(d => d.latitude && d.longitude);
-
-  withCoords.forEach(d => {
-    const col = countryColor(d.country);
-    const marker = L.circleMarker([d.latitude, d.longitude], {
-      radius: 5, fillColor: col, color: '#fff',
-      weight: 0.5, fillOpacity: 0.85
-    });
-    marker.bindPopup(`
-      <div class="popup-name">${d.installation_name}</div>
-      <div class="popup-row">Country: <span>${d.country}</span></div>
-      <div class="popup-row">Type: <span>${d.installation_type || '—'}</span></div>
-      <div class="popup-row">Status: <span>${d.status || '—'}</span></div>
-      <div class="popup-row">Operator: <span>${d.operator || '—'}</span></div>
-      ${d.year_installed ? `<div class="popup-row">Installed: <span>${d.year_installed}</span></div>` : ''}
-      <div class="popup-row">Source: <span>${d.source_authority || '—'}</span></div>
-    `);
-    markerLayer.addLayer(marker);
-  });
-}
-
-// ── Tab switching ──────────────────────────────────────────────────────────
-function switchTab(name) {
-  document.querySelectorAll('.tab').forEach((t, i) => {
-    t.classList.toggle('active', ['dashboard','table','map'][i] === name);
-  });
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
-  if (name === 'map') setTimeout(initMap, 50);
-  if (name === 'table') renderTable();
 }
 </script>
 </body>
