@@ -100,141 +100,264 @@ def http_get_json(url, timeout=30):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# UK — NSTA ArcGIS REST API
+# UK — NSTA (primær) → EMODnet (fallback, alltid tilgjengelig)
 # ══════════════════════════════════════════════════════════════════════════════
 
-def fetch_uk_nsta():
-    print("\n── UK: NSTA ArcGIS REST ──────────────────────────────────────")
-
-    layers = [
-        (0, "Surface (platforms/FPSOs)"),
-        (1, "Subsea (wellheads/manifolds)"),
-    ]
+def fetch_uk_nsta_arcgis():
+    """Prøver NSTA ArcGIS direkte — feiler hvis DNS blokkeres av VPN."""
     BASE = (
         "https://data.nstauthority.co.uk/arcgis/rest/services/"
         "Public_WGS84/UKCS_Offshore_Infrastructure_WGS84/FeatureServer"
     )
-
-    # Test connection first
-    try:
-        test_url = f"{BASE}/0?f=json"
-        info = http_get_json(test_url, timeout=15)
-        if "error" in info:
-            raise RuntimeError(str(info["error"]))
-        print(f"  Tilkoblet: {info.get('name','NSTA Layer 0')}")
-    except Exception as e:
-        print(f"  [FEIL] Kan ikke nå NSTA: {e}")
-        print("  Tips: Koble fra VPN og prøv igjen.")
-        return []
+    test_url = f"{BASE}/0?f=json"
+    info = http_get_json(test_url, timeout=10)
+    if "error" in info:
+        raise RuntimeError(str(info["error"]))
 
     all_records = []
-
-    for layer_id, layer_label in layers:
+    for layer_id, layer_label in [(0, "Surface"), (1, "Subsea")]:
         query_url = f"{BASE}/{layer_id}/query"
-        print(f"  Henter lag {layer_id}: {layer_label}...")
+        layer_info = http_get_json(f"{BASE}/{layer_id}?f=json")
+        fields = [f["name"] for f in layer_info.get("fields", [])]
 
-        # Get layer info for field names
-        try:
-            layer_info = http_get_json(f"{BASE}/{layer_id}?f=json")
-            fields = [f["name"] for f in layer_info.get("fields", [])]
-        except Exception:
-            fields = []
-
-        def pick(*candidates):
-            for c in candidates:
-                if c in fields:
-                    return c
+        def pick(*cands):
+            for c in cands:
+                if c in fields: return c
             return None
 
-        name_f   = pick("NAME", "Name", "INFRA_NAME", "FACILITY_NAME", "InstallationName")
-        type_f   = pick("INF_TYPE", "Type", "INFRASTRUCTURE_TYPE", "SubType")
+        name_f   = pick("NAME", "Name", "INFRA_NAME", "FACILITY_NAME")
+        type_f   = pick("INF_TYPE", "Type", "INFRASTRUCTURE_TYPE")
         status_f = pick("Status", "STATUS", "ACTIVE_STATUS")
         op_f     = pick("REP_GROUP", "Operator", "OPERATOR", "COMPANY")
 
-        print(f"  Felt: navn={name_f}, type={type_f}, status={status_f}, operatør={op_f}")
+        ids_data = http_get_json(f"{query_url}?" + urllib.parse.urlencode({
+            "where": "1=1", "returnIdsOnly": "true", "f": "json"
+        }))
+        all_ids = ids_data.get("objectIds") or []
+        print(f"  NSTA lag {layer_id}: {len(all_ids)} objekter")
 
-        # Fetch all ObjectIDs first
+        out_fields = ",".join(f for f in [name_f, type_f, status_f, op_f] if f) or "*"
+        for i in range(0, len(all_ids), 200):
+            batch = all_ids[i:i + 200]
+            data = http_get_json(f"{query_url}?" + urllib.parse.urlencode({
+                "objectIds": ",".join(str(x) for x in batch),
+                "outFields": out_fields, "returnGeometry": "true",
+                "outSR": "4326", "f": "json"
+            }))
+            for feat in data.get("features", []):
+                a = feat.get("attributes", {})
+                g = feat.get("geometry")
+                def pv(field):
+                    if not field: return None
+                    v = a.get(field)
+                    return str(v).strip() if v not in (None, "", "None", "Null") else None
+                all_records.append({
+                    "installation_name": pv(name_f) or "Unknown",
+                    "country": "United Kingdom",
+                    "region": "UK Continental Shelf",
+                    "fuel_type": "oil and gas", "production_type": None,
+                    "status": normalize_status(pv(status_f), UK_STATUS),
+                    "operator": pv(op_f) or "Unknown",
+                    "onshore_offshore": "offshore",
+                    "latitude": g["y"] if g else None,
+                    "longitude": g["x"] if g else None,
+                    "year_production_start": None, "year_discovered": None,
+                    "basin": None, "block": None, "owners": None, "wiki_url": None,
+                    "source_authority": "NSTA",
+                    "data_type": "installation",
+                    "installation_type": pv(type_f) or "Unknown",
+                    "parent_field": None, "water_depth": None,
+                    "fact_page_url": None, "id": pv(name_f),
+                })
+    return all_records
+
+
+def fetch_uk_emodnet():
+    """
+    EMODnet Human Activities WFS — pan-europeisk kilde for offshore installasjoner.
+    Bruker GetCapabilities XML-parsing for å finne riktig typename.
+    """
+    # Prøv flere kjente EMODnet-endepunkter
+    WFS_URLS = [
+        "https://ows.emodnet-humanactivities.eu/wfs",
+        "https://ows.emodnet-humanactivities.eu/geoserver/wfs",
+        "https://ows.emodnet-humanactivities.eu/geoserver/humanactivities/wfs",
+    ]
+    KEYWORDS = ["oil", "gas", "platform", "install", "offshore", "infrastructure", "facility"]
+
+    print("  Bruker EMODnet Human Activities som UK-kilde...")
+
+    typename = None
+    wfs_url_used = None
+
+    for WFS_URL in WFS_URLS:
+        print(f"  Prøver: {WFS_URL}")
+        # Parse GetCapabilities XML for å finne typenames
         try:
-            ids_params = urllib.parse.urlencode({
-                "where": "1=1",
-                "returnIdsOnly": "true",
-                "f": "json"
+            caps_params = urllib.parse.urlencode({
+                "service": "WFS", "version": "1.1.0", "request": "GetCapabilities"
             })
-            ids_data = http_get_json(f"{query_url}?{ids_params}")
-            all_ids = ids_data.get("objectIds") or []
-            print(f"  {len(all_ids)} objekter funnet i lag {layer_id}")
+            caps_xml = http_get(f"{WFS_URL}?{caps_params}", timeout=30)
+            root = ET.fromstring(caps_xml)
+
+            # Hent alle Name-elementer under FeatureType
+            all_typenames = []
+            for elem in root.iter():
+                tag = elem.tag.split("}")[-1] if "}" in elem.tag else elem.tag
+                if tag == "FeatureType":
+                    for child in elem:
+                        ctag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
+                        if ctag == "Name" and child.text:
+                            all_typenames.append(child.text.strip())
+
+            print(f"  Typenames funnet: {all_typenames[:8]}")
+
+            # Finn typename med relevante nøkkelord
+            for tn in all_typenames:
+                if any(kw in tn.lower() for kw in KEYWORDS):
+                    typename = tn
+                    wfs_url_used = WFS_URL
+                    print(f"  Bruker typename: {typename}")
+                    break
+
+            if typename:
+                break
+
         except Exception as e:
-            print(f"  [FEIL] Henting av IDs feilet: {e}")
+            print(f"  [ADVARSEL] GetCapabilities feilet for {WFS_URL}: {e}")
             continue
 
-        # Fetch in batches of 200
-        out_fields = ",".join(f for f in [name_f, type_f, status_f, op_f] if f) or "*"
-        layer_records = []
-        BATCH = 200
-
-        for i in range(0, len(all_ids), BATCH):
-            batch = all_ids[i:i + BATCH]
+    # Fallback: prøv hardkodede kandidater direkte
+    if not typename:
+        print("  GetCapabilities fant ingen match — prøver hardkodede typenames direkte...")
+        hard_candidates = [
+            ("https://ows.emodnet-humanactivities.eu/wfs", "humanactivities:offshore_installations"),
+            ("https://ows.emodnet-humanactivities.eu/wfs", "humanactivities:oilgas_platforms"),
+            ("https://ows.emodnet-humanactivities.eu/wfs", "humanactivities:platforms"),
+            ("https://ows.emodnet-humanactivities.eu/wfs", "humanactivities:infrastructure"),
+            ("https://ows.emodnet-humanactivities.eu/geoserver/wfs", "humanactivities:offshore_installations"),
+            ("https://ows.emodnet-humanactivities.eu/geoserver/wfs", "humanactivities:oilgas_platforms"),
+        ]
+        for wfs_url, tn in hard_candidates:
             params = urllib.parse.urlencode({
-                "objectIds": ",".join(str(x) for x in batch),
-                "outFields": out_fields,
-                "returnGeometry": "true",
-                "outSR": "4326",
-                "f": "json"
+                "service": "WFS", "version": "1.1.0", "request": "GetFeature",
+                "typeName": tn, "outputFormat": "application/json",
+                "srsName": "EPSG:4326", "maxFeatures": "1"
             })
             try:
-                data = http_get_json(f"{query_url}?{params}")
-                if "error" in data:
-                    print(f"  [FEIL] Batch {i}: {data['error']}")
-                    continue
-                features = data.get("features", [])
-                for feat in features:
-                    a = feat.get("attributes", {})
-                    g = feat.get("geometry")
-                    lat = g["y"] if g else None
-                    lon = g["x"] if g else None
+                data = http_get_json(f"{wfs_url}?{params}", timeout=20)
+                if "features" in data:
+                    typename = tn
+                    wfs_url_used = wfs_url
+                    print(f"  Typename bekreftet: {typename}")
+                    break
+            except Exception:
+                continue
 
-                    def pv(field):
-                        if not field:
-                            return None
-                        v = a.get(field)
-                        return str(v).strip() if v not in (None, "", "None", "Null") else None
+    if not typename:
+        print("  [FEIL] Ingen gyldig EMODnet typename funnet.")
+        return []
 
-                    name = pv(name_f) or "Unknown"
-                    layer_records.append({
-                        "installation_name": name,
-                        "country": "United Kingdom",
-                        "region": "UK Continental Shelf",
-                        "fuel_type": "oil and gas",
-                        "production_type": None,
-                        "status": normalize_status(pv(status_f), UK_STATUS),
-                        "operator": pv(op_f) or "Unknown",
-                        "onshore_offshore": "offshore",
-                        "latitude": lat,
-                        "longitude": lon,
-                        "year_production_start": None,
-                        "year_discovered": None,
-                        "basin": None,
-                        "block": None,
-                        "owners": None,
-                        "wiki_url": None,
-                        "source_authority": "NSTA",
-                        "data_type": "installation",
-                        "installation_type": pv(type_f) or "Unknown",
-                        "parent_field": None,
-                        "water_depth": None,
-                        "fact_page_url": None,
-                        "id": name,
-                    })
-                print(f"  Hentet {len(layer_records)} fra lag {layer_id}...", end="\r")
-            except Exception as e:
-                print(f"\n  [FEIL] Batch {i}: {e}")
-                time.sleep(1)
+    # Hent alle features
+    for fmt in ["application/json", "json", "GeoJSON"]:
+        params = urllib.parse.urlencode({
+            "service": "WFS", "version": "1.1.0", "request": "GetFeature",
+            "typeName": typename, "outputFormat": fmt, "srsName": "EPSG:4326"
+        })
+        try:
+            data = http_get_json(f"{wfs_url_used}?{params}", timeout=120)
+            features = data.get("features", [])
+            if features:
+                print(f"  EMODnet: {len(features)} totale features hentet")
+                break
+        except Exception as e:
+            print(f"  [prøver neste format etter: {e}]")
+            features = []
 
-        print(f"  -> {len(layer_records)} UK-installasjoner fra lag {layer_id}")
-        all_records.extend(layer_records)
+    if not features:
+        print("  [FEIL] Ingen features hentet fra EMODnet.")
+        return []
 
-    print(f"  UK totalt: {len(all_records)} installasjoner")
-    return all_records
+    if features:
+        sample = features[0].get("properties") or {}
+        print(f"  Eksempel-felt: {list(sample.keys())[:12]}")
+
+    # Map features → records, filtrer UK
+    UK_IDENTIFIERS = {"uk", "gb", "gbr", "united kingdom", "great britain", "britain"}
+
+    def map_emodnet_feature(feat, force_uk=False):
+        props = feat.get("properties") or {}
+        geom  = feat.get("geometry") or {}
+        coords = geom.get("coordinates", [None, None])
+        fl = {k.lower(): k for k in props.keys()}
+
+        def pick(*cands):
+            for c in cands:
+                if c.lower() in fl: return fl[c.lower()]
+            return None
+        def pv(field):
+            if not field: return None
+            v = props.get(field)
+            return str(v).strip() if v not in (None, "", "None", "nan") else None
+
+        country_f = pick("country", "nation", "ms", "member_state", "state", "jurisdiction")
+        country_raw = pv(country_f) or ""
+        if not force_uk and country_raw and country_raw.lower() not in UK_IDENTIFIERS:
+            return None  # Not UK
+
+        name_f   = pick("name", "installation_name", "platform_name", "facility_name", "label", "id")
+        type_f   = pick("category", "type", "installation_type", "inf_type", "kind", "sub_type")
+        status_f = pick("status", "phase", "condition", "operational_status", "activity")
+        op_f     = pick("operator", "company", "owner", "rep_group", "operator_name")
+
+        try:
+            lon = float(coords[0]) if coords[0] is not None else None
+            lat = float(coords[1]) if len(coords) > 1 and coords[1] is not None else None
+        except (TypeError, ValueError):
+            lat = lon = None
+
+        return {
+            "installation_name": pv(name_f) or "Unknown",
+            "country": "United Kingdom",
+            "region": "UK Continental Shelf",
+            "fuel_type": "oil and gas", "production_type": None,
+            "status": normalize_status(pv(status_f), UK_STATUS),
+            "operator": pv(op_f) or "Unknown",
+            "onshore_offshore": "offshore",
+            "latitude": lat, "longitude": lon,
+            "year_production_start": None, "year_discovered": None,
+            "basin": None, "block": None, "owners": None, "wiki_url": None,
+            "source_authority": "EMODnet / NSTA",
+            "data_type": "installation",
+            "installation_type": pv(type_f) or "Unknown",
+            "parent_field": None, "water_depth": None,
+            "fact_page_url": None, "id": pv(name_f),
+        }
+
+    # Try with country filter first
+    records = [r for feat in features if (r := map_emodnet_feature(feat)) is not None]
+
+    if not records:
+        print("  [INFO] Ingen UK-treff med country-filter — returnerer alle features")
+        records = [r for feat in features if (r := map_emodnet_feature(feat, force_uk=True)) is not None]
+
+    return records
+
+
+def fetch_uk():
+    print("\n── UK: NSTA → EMODnet fallback ───────────────────────────────")
+    # Try NSTA first (fast, detailed)
+    try:
+        records = fetch_uk_nsta_arcgis()
+        print(f"  -> {len(records)} UK-installasjoner fra NSTA")
+        return records
+    except Exception as e:
+        print(f"  NSTA utilgjengelig ({e}) — bruker EMODnet...")
+
+    # EMODnet fallback
+    records = fetch_uk_emodnet()
+    print(f"  -> {len(records)} UK-installasjoner fra EMODnet")
+    return records
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -519,7 +642,7 @@ def main():
 
     all_records = []
 
-    uk_records = fetch_uk_nsta()
+    uk_records = fetch_uk()
     all_records.extend(uk_records)
 
     dk_records = fetch_denmark_ens()
