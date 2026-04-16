@@ -59,14 +59,25 @@ NL_STATUS = {
     "in gebruik": "operating",
     "active": "operating",
     "actief": "operating",
+    "in use": "operating",
+    "in service": "operating",
+    "production": "operating",
+    "operational": "operating",
     "ontmanteld": "abandoned",
     "verwijderd": "abandoned",
     "decommissioned": "abandoned",
     "removed": "abandoned",
+    "abandoned": "abandoned",
+    "plugged and abandoned": "abandoned",
     "in aanleg": "in-development",
     "gepland": "in-development",
+    "under construction": "in-development",
+    "planned": "in-development",
     "buiten gebruik": "mothballed",
     "inactief": "mothballed",
+    "inactive": "mothballed",
+    "shut in": "mothballed",
+    "temporarily abandoned": "mothballed",
 }
 
 
@@ -255,17 +266,33 @@ def fetch_denmark_ens():
     except Exception as e:
         print(f"  [ADVARSEL] Schema-henting feilet: {e}")
 
-    # Step 2: Hent features
-    params = urllib.parse.urlencode({
-        "service": "WFS", "version": "2.0.0", "request": "GetFeature",
-        "typeName": TYPENAME, "outputFormat": "application/json", "srsName": "EPSG:4326"
-    })
-    try:
-        data = http_get_json(f"{WFS_URL}?{params}", timeout=60)
-        features = data.get("features", [])
-        print(f"  {len(features)} features hentet fra ENS (Danmark)")
-    except Exception as e:
-        print(f"  [FEIL] ENS WFS: {e}")
+    # Step 2: Hent features — prøv flere output-formater
+    features = []
+    output_formats = [
+        "application/json",
+        "json",
+        "application/json; subtype=geojson/1.0",
+        "GeoJSON",
+    ]
+    for fmt in output_formats:
+        params = urllib.parse.urlencode({
+            "service": "WFS", "version": "1.1.0", "request": "GetFeature",
+            "typeName": TYPENAME, "outputFormat": fmt, "srsName": "EPSG:4326",
+            "maxFeatures": "2000"
+        })
+        try:
+            raw = http_get(f"{WFS_URL}?{params}", timeout=60)
+            data = json.loads(raw)
+            features = data.get("features", [])
+            if features:
+                print(f"  {len(features)} features hentet (format: {fmt})")
+                break
+        except Exception as e:
+            print(f"  [prøver neste format etter feil med '{fmt}': {e}]")
+            continue
+
+    if not features:
+        print("  [FEIL] Ingen data fra ENS Danmark med noen output-format.")
         return []
 
     if not features:
@@ -287,9 +314,9 @@ def fetch_denmark_ens():
         return None
 
     name_f   = pick("platform_name", "name", "navn", "label", "installationname", "platformname")
-    type_f   = pick("platform_type", "type", "type_code", "kind", "category", "installation_type")
-    status_f = pick("status", "driftstatus", "status_code", "phase", "in_use")
-    op_f     = pick("company_name", "company", "operator", "licensee", "owner", "licenseholder")
+    type_f   = pick("platform_type_name", "platform_type", "category_name", "type", "kind", "category", "installation_type")
+    status_f = pick("status", "driftstatus", "status_code", "phase", "in_use", "function_name")
+    op_f     = pick("operator_name", "company_name", "company", "operator", "licensee", "owner", "licenseholder")
     field_f  = pick("field_name", "field", "felt", "production_unit", "fieldname")
 
     print(f"  Feltmapping: navn={name_f}, type={type_f}, status={status_f}, op={op_f}, felt={field_f}")
@@ -408,10 +435,10 @@ def fetch_netherlands_nlog():
                 return fl[c.lower()]
         return None
 
-    name_f   = pick("NAAM", "naam", "NAME", "name", "FACILITY_NAME", "label", "OMSCHRIJVING", "omschrijving")
-    type_f   = pick("TYPE", "type", "SOORT", "soort", "CATEGORIE", "categorie", "KIND")
-    status_f = pick("STATUS", "status", "DRIFTSTATUS", "IN_GEBRUIK", "ACTIVE")
-    op_f     = pick("MAATSCHAPPIJ", "maatschappij", "OPERATOR", "operator", "COMPANY", "NAAM_MAA")
+    name_f   = pick("FACILITY_NAME", "NAAM", "naam", "NAME", "name", "label", "OMSCHRIJVING")
+    type_f   = pick("FACILITY_TYPE_DESCRIPTION", "FACILITY_TYPE_CODE", "TYPE", "type", "SOORT", "KIND")
+    status_f = pick("STATUS_DESCRIPTION", "STATUS_CODE", "STATUS", "status", "DRIFTSTATUS", "IN_GEBRUIK")
+    op_f     = pick("OPERATOR", "MAATSCHAPPIJ", "maatschappij", "operator", "COMPANY", "NAAM_MAA")
     field_f  = pick("VELD", "veld", "FIELD_NAME", "VELDNAAM", "FIELD", "PRODUCTION_UNIT")
 
     print(f"  Feltmapping: naam={name_f}, type={type_f}, status={status_f}, op={op_f}, veld={field_f}")
