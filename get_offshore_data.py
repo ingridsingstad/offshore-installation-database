@@ -296,17 +296,282 @@ def fetch_uk_nsta():
 
 
 def fetch_denmark_ens():
-    wfs_query(
-        wfs_url="https://data.geus.dk/geusmap/ows/4326.jsp",
-        typename="ens_platform",
-        label="ENS (Danmark)",
-        country="Denmark",
-        region="Danish Continental Shelf",
-        name_fields=["platform_name", "name", "NAME", "NAVN", "PlatformName",
-                     "installation_name", "label"],
-        type_field="platform_type",
-        source_authority="Regulator (Danish Energy Agency)",
-    )
+    """
+    Danish Energy Agency (ENS) via GEUS WFS.
+    First fetches the schema to auto-detect field names, then fetches features.
+    """
+    WFS_URL = "https://data.geus.dk/geusmap/ows/4326.jsp"
+    TYPENAME = "ens_platform"
+    print(f"Kobler til ENS (Danmark) via WFS...")
+
+    # ── Step 1: hent schema for å finne feltnavnene ──────────────────────────
+    field_names = []
+    try:
+        r = requests.get(WFS_URL, params={
+            "service": "WFS", "version": "2.0.0",
+            "request": "DescribeFeatureType", "typeName": TYPENAME,
+        }, headers=HEADERS, timeout=30)
+        if r.status_code == 200:
+            root = ET.fromstring(r.content)
+            for el in root.iter():
+                tag = el.tag.split("}")[-1] if "}" in el.tag else el.tag
+                if tag in ("element", "Element"):
+                    nm = el.get("name") or el.get("Name")
+                    if nm:
+                        field_names.append(nm)
+            if field_names:
+                print(f"  ENS feltnavn funnet: {field_names}")
+    except Exception as e:
+        print(f"  [ADVARSEL] DescribeFeatureType feilet: {e}")
+
+    # ── Step 2: velg feltmapping ─────────────────────────────────────────────
+    # Prøv automatisk oppdagede felt, fall tilbake til kjente kandidater
+    all_fields_lower = {f.lower(): f for f in field_names}
+
+    def pick_field(*candidates):
+        for c in candidates:
+            if c.lower() in all_fields_lower:
+                return all_fields_lower[c.lower()]
+        return None
+
+    name_field   = pick_field("platform_name", "name", "navn", "label", "installationname")
+    type_field   = pick_field("platform_type", "type", "type_code", "kind", "category")
+    status_field = pick_field("status", "driftstatus", "status_code", "phase")
+    op_field     = pick_field("company_name", "company", "operator", "licensee", "owner")
+
+    print(f"  Felt: navn={name_field}, type={type_field}, status={status_field}, operatør={op_field}")
+
+    # ── Step 3: hent features ────────────────────────────────────────────────
+    params = {
+        "service": "WFS", "version": "2.0.0", "request": "GetFeature",
+        "typeName": TYPENAME, "outputFormat": "application/json", "srsName": "EPSG:4326",
+    }
+    features = []
+    try:
+        r = requests.get(WFS_URL, params=params, headers=HEADERS, timeout=90)
+        if r.status_code == 200 and "features" in r.text[:500]:
+            data = r.json()
+            features = data.get("features", [])
+            print(f"  ENS (Danmark): {len(features)} features hentet (GeoJSON)")
+        else:
+            print(f"  [ADVARSEL] ENS GeoJSON feilet (HTTP {r.status_code}), prøver GML...")
+    except Exception as e:
+        print(f"  [FEIL] ENS GeoJSON: {e}")
+
+    if not features:
+        print("  [FEIL] Ingen data hentet fra ENS (Danmark).")
+        return
+
+    # Debug: vis felt i første feature
+    if features:
+        sample_props = features[0].get("properties") or {}
+        print(f"  Eksempel-felt i første feature: {list(sample_props.keys())[:15]}")
+        # Oppdater feltmapping basert på faktiske data om schema-henting feilet
+        if not field_names:
+            all_fields_lower = {k.lower(): k for k in sample_props.keys()}
+            name_field   = pick_field("platform_name","name","navn","label","installationname")
+            type_field   = pick_field("platform_type","type","type_code","kind","category")
+            status_field = pick_field("status","driftstatus","status_code","phase")
+            op_field     = pick_field("company_name","company","operator","licensee","owner")
+
+    added = 0
+    for feat in features:
+        props = feat.get("properties") or {}
+        geom  = feat.get("geometry") or {}
+        coords = geom.get("coordinates", [None, None])
+        lat = coords[1] if len(coords) > 1 else None
+        lon = coords[0] if len(coords) > 0 else None
+
+        name = str(props.get(name_field, "")).strip() if name_field else None
+        if not name or name in ("", "None", "nan", "NULL"):
+            # fallback: prøv alle felt
+            for k, v in props.items():
+                if v and str(v).strip() not in ("", "None", "nan") and len(str(v)) > 2:
+                    if any(c.isalpha() for c in str(v)):
+                        name = str(v).strip()
+                        break
+
+        inst_type = str(props.get(type_field, "Unknown")).strip() if type_field else "Unknown"
+        status    = str(props.get(status_field, "Unknown")).strip() if status_field else "Unknown"
+        operator  = str(props.get(op_field, "Unknown")).strip() if op_field else "Unknown"
+
+        global_inventory.append({
+            "installation_name": name,
+            "country": "Denmark",
+            "region": "Danish Continental Shelf",
+            "installation_type": inst_type if inst_type not in ("", "None", "nan") else "Unknown",
+            "operator": operator if operator not in ("", "None", "nan") else "Unknown",
+            "status": status if status not in ("", "None", "nan") else "Unknown",
+            "year_installed": None,
+            "latitude": lat,
+            "longitude": lon,
+            "source_url": WFS_URL,
+            "source_authority": "Regulator (Danish Energy Agency / ENS)",
+            "confidence_level": "High",
+        })
+        added += 1
+
+    print(f"  -> {added} installasjoner fra ENS (Danmark) lagt til.")
+
+
+def fetch_emodnet_europe():
+    """
+    EMODnet Human Activities — Offshore Oil & Gas Installations.
+    Dekker: Danmark, UK, Norge, Nederland, og mange andre europeiske land.
+    Harmoniserte felt: navn, land, operatør, produksjonsstart, status, kategori.
+    Kilde: https://ows.emodnet-humanactivities.eu/wfs
+    """
+    WFS_URL = "https://ows.emodnet-humanactivities.eu/wfs"
+    print("\nKobler til EMODnet Human Activities (EU offshore installasjoner)...")
+
+    # ── Finn riktig typename via GetCapabilities ──────────────────────────────
+    typename = None
+    try:
+        r = requests.get(WFS_URL, params={
+            "service": "WFS", "version": "2.0.0", "request": "GetCapabilities",
+        }, headers=HEADERS, timeout=30)
+        if r.status_code == 200:
+            root = ET.fromstring(r.content)
+            for el in root.iter():
+                tag = el.tag.split("}")[-1] if "}" in el.tag else el.tag
+                if tag == "Name":
+                    val = (el.text or "").strip()
+                    if "install" in val.lower() or "offshore" in val.lower() or "oil" in val.lower():
+                        typename = val
+                        print(f"  EMODnet typename funnet: {typename}")
+                        break
+    except Exception as e:
+        print(f"  [ADVARSEL] GetCapabilities feilet: {e}")
+
+    # Fallback typenames basert på kjent EMODnet navnekonvensjon
+    if not typename:
+        for candidate in [
+            "humanactivities:offshore_installations",
+            "humanactivities:EOIL_GAS_OFFSHORE_INSTALLATIONS",
+            "humanactivities:oilgas_installations",
+            "humanactivities:oil_gas_offshore_installations",
+            "offshore_installations",
+        ]:
+            print(f"  Prøver typename: {candidate}")
+            try:
+                r = requests.get(WFS_URL, params={
+                    "service": "WFS", "version": "2.0.0", "request": "GetFeature",
+                    "typeName": candidate, "outputFormat": "application/json",
+                    "count": "1",
+                }, headers=HEADERS, timeout=20)
+                if r.status_code == 200 and "features" in r.text[:200]:
+                    typename = candidate
+                    print(f"  EMODnet typename bekreftet: {typename}")
+                    break
+            except Exception:
+                pass
+
+    if not typename:
+        print("  [FEIL] Kunne ikke finne EMODnet typename. Hopper over EMODnet.")
+        return
+
+    # ── Hent alle features ────────────────────────────────────────────────────
+    features = []
+    try:
+        r = requests.get(WFS_URL, params={
+            "service": "WFS", "version": "2.0.0", "request": "GetFeature",
+            "typeName": typename, "outputFormat": "application/json",
+            "srsName": "EPSG:4326",
+        }, headers=HEADERS, timeout=120)
+        if r.status_code == 200 and "features" in r.text[:500]:
+            data = r.json()
+            features = data.get("features", [])
+            print(f"  EMODnet: {len(features)} features hentet")
+        else:
+            print(f"  [FEIL] EMODnet GetFeature feilet (HTTP {r.status_code})")
+            return
+    except Exception as e:
+        print(f"  [FEIL] EMODnet: {e}")
+        return
+
+    if not features:
+        print("  [FEIL] Ingen EMODnet-data mottatt.")
+        return
+
+    # Debug: vis felt
+    sample = features[0].get("properties") or {}
+    print(f"  Eksempel-felt: {list(sample.keys())[:20]}")
+
+    # ── Feltmapping (EMODnet harmoniserte felt) ───────────────────────────────
+    all_lower = {k.lower(): k for k in sample.keys()}
+
+    def pick(*cands):
+        for c in cands:
+            if c.lower() in all_lower:
+                return all_lower[c.lower()]
+        return None
+
+    name_f    = pick("name","installation_name","namn","nombre")
+    country_f = pick("country","land","pays","country_code")
+    type_f    = pick("category","type","installation_type","function","kind")
+    status_f  = pick("status","current_status","activity_status","phase")
+    op_f      = pick("operator","company","company_name","operateur")
+    year_f    = pick("production_start","prod_year","year","year_installed","start_year")
+
+    print(f"  Felt: navn={name_f} land={country_f} type={type_f} status={status_f} op={op_f} år={year_f}")
+
+    # ── Bygg inventory — bare europeiske land vi ikke allerede dekker ────────
+    target_countries = {
+        "dk": "Denmark", "denmark": "Denmark",
+        "gb": "United Kingdom", "uk": "United Kingdom", "united kingdom": "United Kingdom",
+    }
+
+    added_by_country = {}
+    for feat in features:
+        props = feat.get("properties") or {}
+        geom  = feat.get("geometry") or {}
+        coords = geom.get("coordinates", [None, None])
+        lat = coords[1] if geom.get("type") == "Point" and len(coords) > 1 else None
+        lon = coords[0] if geom.get("type") == "Point" and len(coords) > 0 else None
+
+        raw_country = str(props.get(country_f, "")).strip().lower() if country_f else ""
+        country = target_countries.get(raw_country)
+        if not country:
+            continue  # bare hent land vi trenger
+
+        name = str(props.get(name_f, "")).strip() if name_f else None
+        if not name or name in ("", "None", "nan"):
+            continue
+
+        inst_type = str(props.get(type_f, "Unknown")).strip() if type_f else "Unknown"
+        status    = str(props.get(status_f, "Unknown")).strip() if status_f else "Unknown"
+        operator  = str(props.get(op_f, "Unknown")).strip() if op_f else "Unknown"
+        year_raw  = props.get(year_f) if year_f else None
+        try:
+            year = int(year_raw) if year_raw and str(year_raw).isdigit() else None
+        except Exception:
+            year = None
+
+        region_map = {
+            "Denmark": "Danish Continental Shelf",
+            "United Kingdom": "UK Continental Shelf",
+        }
+
+        global_inventory.append({
+            "installation_name": name,
+            "country": country,
+            "region": region_map.get(country, country),
+            "installation_type": inst_type if inst_type not in ("", "None", "nan") else "Unknown",
+            "operator": operator if operator not in ("", "None", "nan") else "Unknown",
+            "status": status if status not in ("", "None", "nan") else "Unknown",
+            "year_installed": year,
+            "latitude": lat,
+            "longitude": lon,
+            "source_url": WFS_URL,
+            "source_authority": "EMODnet Human Activities (EU)",
+            "confidence_level": "High",
+        })
+        added_by_country[country] = added_by_country.get(country, 0) + 1
+
+    for country, n in sorted(added_by_country.items()):
+        print(f"  -> {n} installasjoner fra {country} (EMODnet) lagt til.")
+    if not added_by_country:
+        print("  [INFO] Ingen DK/UK-installasjoner funnet i EMODnet-data.")
 
 
 def fetch_netherlands_nlog():
@@ -476,8 +741,9 @@ print(f"  {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC")
 print("=" * 60)
 
 fetch_norway_sodir()
-fetch_uk_nsta()
-fetch_denmark_ens()
+fetch_uk_nsta()        # prøver data.nstauthority.co.uk — kan blokkeres av VPN
+fetch_emodnet_europe() # EMODnet dekker DK + UK med harmoniserte felt
+fetch_denmark_ens()    # GEUS WFS — direkte ENS-data for Danmark
 fetch_netherlands_nlog()
 fetch_usa_bsee()
 
@@ -502,6 +768,7 @@ output_payload = {
         "sources": [
             "SODIR Norway — ArcGIS REST (MapServer/307)",
             "NSTA UK — ArcGIS FeatureServer (UKCS_Offshore_Infrastructure_WGS84)",
+            "EMODnet Human Activities — WFS offshore installations (DK + UK)",
             "Danish Energy Agency — WFS (data.geus.dk, ens_platform)",
             "NLOG Netherlands — WFS (gdngeoservices.nl)",
             "BSEE USA — ASCII bulk download (platstrufixed.zip)",
