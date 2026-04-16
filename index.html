@@ -3,359 +3,273 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>RIG EXTRACT — Offshore Installation Registry</title>
+<title>GEM — Global Oil & Gas Extraction Tracker</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-/* ── Reset & base ──────────────────────────────────────────────────────── */
+/* ── Reset ───────────────────────────────────────────────────────────────── */
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:       #07111f;
-  --surface:  #0d1b2e;
-  --surface2: #112035;
-  --surface3: #16283f;
-  --border:   #1a3050;
-  --border2:  #223d5e;
-  --accent:   #00c8ff;
-  --accent2:  #0099cc;
-  --green:    #00e676;
-  --green-bg: #00261a;
-  --green-bd: #00a854;
-  --amber:    #ffb300;
-  --red:      #ff4444;
-  --muted:    #4a6b8a;
-  --text:     #c8ddf0;
-  --text2:    #89aac8;
-  --mono:     'JetBrains Mono','Courier New',monospace;
-  --sans:     'Inter','Segoe UI',system-ui,sans-serif;
-  --sidebar:  260px;
+  --bg:#07111f;--surface:#0d1b2e;--surface2:#112035;--surface3:#16283f;
+  --border:#1a3050;--border2:#223d5e;
+  --accent:#00c8ff;--accent2:#0099cc;
+  --green:#00e676;--green-bg:#00261a;--green-bd:#00a854;
+  --amber:#ffb300;--red:#ff4444;--purple:#b388ff;
+  --muted:#4a6b8a;--text:#c8ddf0;--text2:#89aac8;
+  --mono:'JetBrains Mono','Courier New',monospace;
+  --sans:'Inter','Segoe UI',system-ui,sans-serif;
+  --sidebar:264px;
 }
 html,body{height:100%;overflow:hidden}
 body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;display:flex;flex-direction:column}
-
-/* ── Scrollbar ──────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:var(--surface)}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 
-/* ══════════════════════════════════════════════════════════════════════════
-   TOP BAR
-══════════════════════════════════════════════════════════════════════════ */
+/* ══ TOP BAR ═══════════════════════════════════════════════════════════════ */
 #topbar{
-  height:48px;min-height:48px;
-  background:var(--surface);
-  border-bottom:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0 20px;z-index:100;flex-shrink:0;
+  height:46px;min-height:46px;background:var(--surface);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;padding:0 18px;flex-shrink:0;
 }
-.tb-brand{
-  display:flex;align-items:center;gap:10px;
-  font-family:var(--mono);font-size:14px;font-weight:700;
-  letter-spacing:.12em;color:#fff;
-}
-.tb-brand-sub{font-size:9px;color:var(--muted);font-weight:400;letter-spacing:.08em;margin-top:1px}
-.tb-icon{
-  width:28px;height:28px;background:linear-gradient(135deg,var(--accent2),#005577);
-  border-radius:4px;display:flex;align-items:center;justify-content:center;
-  font-size:14px;flex-shrink:0;
-}
-.tb-status{
-  display:flex;align-items:center;gap:8px;
-  font-family:var(--mono);font-size:10px;color:var(--green);letter-spacing:.06em;
-}
-.tb-status-dot{
-  width:7px;height:7px;border-radius:50%;background:var(--green);
-  box-shadow:0 0 6px var(--green);animation:pulse 2.4s ease-in-out infinite;
-}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.tb-right{display:flex;align-items:center;gap:20px}
-.tb-meta{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.05em}
-.tb-meta span{color:var(--text2)}
+.tb-brand{display:flex;align-items:center;gap:10px}
+.tb-icon{width:28px;height:28px;background:linear-gradient(135deg,#d4a017,#8b6500);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.tb-title{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.08em;color:#fff}
+.tb-sub{font-size:9px;color:var(--muted);letter-spacing:.06em;margin-top:1px}
+.tb-right{display:flex;align-items:center;gap:16px}
+.tb-badge{font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:3px;letter-spacing:.06em}
+.tb-badge-gem{background:#1a2a00;color:#aadd00;border:1px solid #44660033}
+.tb-badge-cc{background:#001a2e;color:var(--muted);border:1px solid var(--border)}
+.tb-status{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;color:var(--green)}
+.tb-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 
-/* ══════════════════════════════════════════════════════════════════════════
-   BODY LAYOUT — SIDEBAR + MAIN
-══════════════════════════════════════════════════════════════════════════ */
+/* ══ LAYOUT ═════════════════════════════════════════════════════════════════ */
 #layout{display:flex;flex:1;overflow:hidden}
 
-/* ── Sidebar ── */
-#sidebar{
-  width:var(--sidebar);min-width:var(--sidebar);
-  background:var(--surface);border-right:1px solid var(--border);
-  display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;
-}
-.sb-section{padding:16px;border-bottom:1px solid var(--border)}
-.sb-label{
-  font-family:var(--mono);font-size:9px;font-weight:700;
-  letter-spacing:.14em;color:var(--muted);text-transform:uppercase;
-  margin-bottom:10px;
-}
-/* Authority cards */
-.auth-card{
-  background:var(--surface2);border:1px solid var(--border);
-  border-radius:5px;padding:8px 10px;margin-bottom:6px;cursor:pointer;
-  transition:border-color .15s,background .15s;
-  display:flex;align-items:center;gap:8px;
-}
-.auth-card:hover{border-color:var(--accent2);background:var(--surface3)}
-.auth-card.active-filter{border-color:var(--accent);background:#001f33}
-.auth-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-.auth-info{flex:1;min-width:0}
-.auth-name{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--text);letter-spacing:.04em}
-.auth-sub{font-size:10px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.auth-count{font-family:var(--mono);font-size:10px;color:var(--accent);font-weight:700}
-
-/* Filters */
+/* ── Sidebar ─────────────────────────────────────────────────────────────── */
+#sidebar{width:var(--sidebar);min-width:var(--sidebar);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.sb-section{padding:14px 14px 12px;border-bottom:1px solid var(--border)}
+.sb-label{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:9px}
 .sb-field{margin-bottom:8px}
-.sb-field label{display:block;font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.sb-field label{display:block;font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;margin-bottom:3px}
 .sb-field input,.sb-field select{
-  width:100%;background:var(--bg);border:1px solid var(--border);
-  color:var(--text);border-radius:4px;padding:6px 9px;font-size:12px;
-  font-family:var(--sans);outline:none;transition:border-color .15s;
-  appearance:none;-webkit-appearance:none;
+  width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);
+  border-radius:4px;padding:5px 8px;font-size:12px;font-family:var(--sans);outline:none;
+  transition:border-color .15s;appearance:none;-webkit-appearance:none;
 }
 .sb-field input:focus,.sb-field select:focus{border-color:var(--accent2)}
 .sb-field input::placeholder{color:var(--muted)}
-.reset-link{
-  font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.06em;
-  cursor:pointer;text-decoration:none;display:inline-block;margin-top:4px;
-  text-transform:uppercase;transition:color .15s;
+
+/* Toggle buttons for offshore/onshore/all */
+.toggle-group{display:flex;gap:4px}
+.toggle-btn{
+  flex:1;padding:5px 4px;border:1px solid var(--border);border-radius:4px;
+  background:var(--bg);color:var(--muted);font-family:var(--mono);font-size:9px;
+  letter-spacing:.05em;text-transform:uppercase;cursor:pointer;transition:all .15s;text-align:center;
 }
+.toggle-btn:hover{border-color:var(--border2);color:var(--text2)}
+.toggle-btn.active{background:#001a2e;color:var(--accent);border-color:var(--accent2)}
+
+.reset-link{font-family:var(--mono);font-size:9px;color:var(--muted);cursor:pointer;text-transform:uppercase;letter-spacing:.06em;transition:color .15s;display:inline-block;margin-top:2px}
 .reset-link:hover{color:var(--accent)}
 
-/* Sidebar bottom info */
-.sb-info{padding:14px 16px;margin-top:auto;border-top:1px solid var(--border)}
-.sb-info-row{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.04em;margin-bottom:4px}
-.sb-info-row span{color:var(--text2)}
+/* Stats panel in sidebar */
+.sb-stat-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.sb-stat-label{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.04em}
+.sb-stat-val{font-family:var(--mono);font-size:11px;font-weight:700}
 
-/* ── Main ── */
+/* Country breakdown in sidebar */
+.country-bar-item{margin-bottom:5px}
+.cbi-header{display:flex;justify-content:space-between;margin-bottom:2px}
+.cbi-name{font-size:10px;color:var(--text2)}
+.cbi-count{font-family:var(--mono);font-size:9px;color:var(--muted)}
+.cbi-track{height:3px;background:var(--border);border-radius:2px}
+.cbi-fill{height:100%;border-radius:2px;transition:width .4s}
+
+/* ── Main ────────────────────────────────────────────────────────────────── */
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden}
 
-/* Panel header */
 #panel-header{
-  padding:16px 20px 12px;border-bottom:1px solid var(--border);flex-shrink:0;
-  display:flex;align-items:flex-start;justify-content:space-between;gap:20px;
+  padding:13px 18px 11px;border-bottom:1px solid var(--border);flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
 }
-.ph-left{}
-.ph-title{font-size:18px;font-weight:700;color:#fff;letter-spacing:.01em;margin-bottom:2px}
-.ph-sub{font-size:11px;color:var(--muted);letter-spacing:.03em}
-.ph-actions{display:flex;gap:8px;flex-shrink:0;align-items:flex-start;padding-top:2px}
-.btn{
-  padding:6px 13px;border-radius:4px;font-size:11px;font-weight:600;
-  cursor:pointer;border:1px solid;transition:all .15s;font-family:var(--mono);
-  letter-spacing:.06em;text-transform:uppercase;
-}
-.btn-outline{background:transparent;color:var(--text2);border-color:var(--border2)}
-.btn-outline:hover{color:var(--accent);border-color:var(--accent);background:#001a2e}
+.ph-left .ph-title{font-size:16px;font-weight:700;color:#fff;letter-spacing:.01em}
+.ph-left .ph-sub{font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.03em}
+.ph-actions{display:flex;gap:7px}
+.btn{padding:5px 12px;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid;transition:all .15s;font-family:var(--mono);letter-spacing:.07em;text-transform:uppercase}
+.btn-ghost{background:transparent;color:var(--text2);border-color:var(--border2)}
+.btn-ghost:hover{color:var(--accent);border-color:var(--accent);background:#001a2e}
 .btn-accent{background:#001f33;color:var(--accent);border-color:var(--accent2)}
 .btn-accent:hover{background:#003355;border-color:var(--accent)}
 
 /* Stats row */
-#stats-row{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:1px;
-  background:var(--border);border-bottom:1px solid var(--border);flex-shrink:0;
-}
-.stat-cell{
-  background:var(--surface2);padding:12px 16px;
-}
-.stat-cell-num{
-  font-family:var(--mono);font-size:20px;font-weight:700;color:var(--accent);
-  line-height:1;margin-bottom:3px;
-}
-.stat-cell-num.green{color:var(--green)}
-.stat-cell-num.amber{color:var(--amber)}
-.stat-cell-num.white{color:#fff}
-.stat-cell-label{font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+#stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border);border-bottom:1px solid var(--border);flex-shrink:0}
+.sc{background:var(--surface2);padding:10px 14px}
+.sc-num{font-family:var(--mono);font-size:17px;font-weight:700;line-height:1;margin-bottom:2px}
+.sc-lbl{font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.09em;text-transform:uppercase}
+.c-white{color:#fff}.c-green{color:var(--green)}.c-amber{color:var(--amber)}.c-red{color:var(--red)}.c-purple{color:var(--purple)}.c-accent{color:var(--accent)}
 
-/* ── Tabs ── */
-#tab-bar{
-  display:flex;gap:0;background:var(--surface);
-  border-bottom:1px solid var(--border);flex-shrink:0;padding:0 20px;
-}
-.tab{
-  padding:10px 16px;cursor:pointer;font-family:var(--mono);font-size:10px;
-  font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
-  border-bottom:2px solid transparent;transition:all .15s;margin-bottom:-1px;
-}
+/* Tabs */
+#tab-bar{display:flex;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;padding:0 18px}
+.tab{padding:9px 14px;cursor:pointer;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s;margin-bottom:-1px}
 .tab:hover{color:var(--text)}
 .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
-.tab-count{
-  display:inline-flex;align-items:center;justify-content:center;
-  background:var(--surface2);border:1px solid var(--border);border-radius:3px;
-  font-size:9px;padding:1px 5px;margin-left:6px;color:var(--muted);
-}
-.tab.active .tab-count{background:#001a2e;border-color:var(--accent2);color:var(--accent)}
+.tc{display:inline-flex;align-items:center;justify-content:center;background:var(--surface2);border:1px solid var(--border);border-radius:3px;font-size:9px;padding:1px 5px;margin-left:6px;color:var(--muted)}
+.tab.active .tc{background:#001a2e;border-color:var(--accent2);color:var(--accent)}
 
-/* ── Tab panels ── */
+/* Tab content */
 #tab-content{flex:1;overflow:hidden;display:flex;flex-direction:column}
 .tab-panel{display:none;flex:1;overflow:auto}
 .tab-panel.active{display:flex;flex-direction:column}
 
-/* ══════════════════════════════════════════════════════════════════════════
-   REGISTRY TABLE
-══════════════════════════════════════════════════════════════════════════ */
-.result-bar{
-  padding:8px 20px;display:flex;align-items:center;justify-content:space-between;
-  border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface2);
-}
-.result-bar-text{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.06em}
+/* ══ TABLE ══════════════════════════════════════════════════════════════════ */
+.result-bar{padding:7px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface2)}
+.result-bar-text{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.05em}
 .result-bar-text span{color:var(--text2)}
 .table-wrap{flex:1;overflow:auto}
 table{width:100%;border-collapse:collapse;font-size:12px}
 thead{background:var(--surface2);position:sticky;top:0;z-index:10}
-th{
-  padding:9px 14px;text-align:left;font-family:var(--mono);font-size:9px;
-  font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);
-  border-bottom:1px solid var(--border);cursor:pointer;user-select:none;
-  white-space:nowrap;transition:color .15s;
-}
+th{padding:8px 12px;text-align:left;font-family:var(--mono);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);border-bottom:1px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap;transition:color .15s}
 th:hover{color:var(--accent2)}
 th.sorted{color:var(--accent)}
-th .sort-icon{margin-left:3px;opacity:.4;font-size:8px}
-th.sorted .sort-icon{opacity:1}
-tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+th .si{margin-left:3px;opacity:.4;font-size:8px}
+th.sorted .si{opacity:1}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s;cursor:pointer}
 tbody tr:hover{background:var(--surface2)}
-td{padding:9px 14px;vertical-align:middle}
+td{padding:8px 12px;vertical-align:middle}
 
-/* Installation cell */
-.inst-name{font-weight:600;color:#fff;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
-.inst-meta{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px;letter-spacing:.03em}
-.inst-meta .country-sep{color:var(--border2);margin:0 3px}
+/* Field name cell */
+.f-name{font-weight:600;color:#fff;font-size:12px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.f-meta{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px}
 
-/* Type/status cell */
-.type-badge{
-  font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.05em;
-  padding:2px 6px;border-radius:3px;background:var(--surface3);
-  border:1px solid var(--border2);color:var(--text2);white-space:nowrap;
-  display:block;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;max-width:140px;
-}
-.status-badge{
-  display:inline-flex;align-items:center;gap:4px;
-  padding:2px 7px;border-radius:3px;font-family:var(--mono);
-  font-size:9px;font-weight:700;letter-spacing:.06em;white-space:nowrap;
-}
-.s-active  {background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
-.s-decomm  {background:#1a1a1a;color:#7a7a7a;border:1px solid #333}
-.s-unknown {background:#0d1a2e;color:#4a8fc0;border:1px solid #1a3a5e}
+/* Status badge */
+.sbadge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:3px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.05em;white-space:nowrap}
+.s-operating{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
+.s-development{background:#1a1200;color:var(--amber);border:1px solid #664400}
+.s-discovered{background:#001833;color:#5599ff;border:1px solid #1a3a6e}
+.s-mothballed{background:#1a1a1a;color:#888;border:1px solid #333}
+.s-decommissioning{background:#2a0000;color:var(--red);border:1px solid #660000}
+.s-abandoned{background:#1a0a0a;color:#884444;border:1px solid #440000}
+.s-other{background:#0d1a2e;color:#4a8fc0;border:1px solid #1a3a5e}
 
-/* Operator cell */
-.op-name{color:var(--text);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
-.op-year{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px}
+/* Fuel badge */
+.fbadge{display:inline-block;padding:1px 6px;border-radius:3px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.04em}
+.f-oil{background:#2a1500;color:#ff9933;border:1px solid #663300}
+.f-gas{background:#001a2a;color:#33aaff;border:1px solid #003355}
+.f-both{background:#1a0a1a;color:#cc77ff;border:1px solid #440055}
+.f-cond{background:#001a14;color:#33ddaa;border:1px solid #004433}
 
-/* Source cell */
-.src-link{
-  font-family:var(--mono);font-size:9px;color:var(--accent2);
-  text-decoration:none;letter-spacing:.03em;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:120px;
-}
-.src-link:hover{color:var(--accent);text-decoration:underline}
+/* Location type dot */
+.loc-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px;flex-shrink:0}
 
 /* Pager */
-.pager{
-  display:flex;align-items:center;gap:10px;padding:10px 20px;
-  justify-content:flex-end;background:var(--surface);
-  border-top:1px solid var(--border);flex-shrink:0;
-}
+.pager{display:flex;align-items:center;gap:8px;padding:8px 18px;justify-content:flex-end;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0}
 .pager-info{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.05em;margin-right:auto}
 .pager-info span{color:var(--text2)}
-.pager-btn{
-  background:var(--surface2);color:var(--text2);border:1px solid var(--border);
-  border-radius:3px;padding:5px 11px;cursor:pointer;font-family:var(--mono);
-  font-size:10px;letter-spacing:.05em;transition:all .15s;
-}
+.pager-btn{background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:3px;padding:4px 10px;cursor:pointer;font-family:var(--mono);font-size:10px;transition:all .15s}
 .pager-btn:disabled{opacity:.3;cursor:not-allowed}
 .pager-btn:not(:disabled):hover{border-color:var(--accent2);color:var(--accent)}
+.page-size-sel{background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:3px;padding:4px 6px;font-family:var(--mono);font-size:10px;cursor:pointer;outline:none}
 
-/* ══════════════════════════════════════════════════════════════════════════
-   ANALYTICS PANEL
-══════════════════════════════════════════════════════════════════════════ */
-.analytics-wrap{padding:20px;overflow:auto}
-.section-header{
-  font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.12em;
-  color:var(--muted);text-transform:uppercase;margin-bottom:12px;padding-bottom:6px;
-  border-bottom:1px solid var(--border);
-}
-.breakdown-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:24px}
-.bc-card{
-  background:var(--surface2);border:1px solid var(--border);
-  border-radius:5px;padding:10px 12px;border-left:2px solid var(--accent);
-}
-.bc-country{font-size:11px;font-weight:600;color:var(--text);margin-bottom:3px}
-.bc-count{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--accent);line-height:1}
-.bc-bar{height:3px;background:var(--border);border-radius:2px;margin-top:6px}
-.bc-fill{height:100%;border-radius:2px;transition:width .6s}
+/* ══ DETAIL PANEL ═══════════════════════════════════════════════════════════ */
+#detail-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center}
+#detail-overlay.open{display:flex}
+#detail-panel{background:var(--surface);border:1px solid var(--border2);border-radius:8px;width:560px;max-width:94vw;max-height:88vh;overflow-y:auto;padding:24px;position:relative}
+.dp-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;transition:color .15s}
+.dp-close:hover{color:#fff}
+.dp-title{font-size:18px;font-weight:700;color:#fff;margin-bottom:4px;padding-right:24px;line-height:1.3}
+.dp-country{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.05em;margin-bottom:16px}
+.dp-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.dp-field{background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:10px 12px}
+.dp-field-label{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+.dp-field-val{font-size:12px;color:var(--text);line-height:1.4}
+.dp-field-val a{color:var(--accent);text-decoration:none}
+.dp-field-val a:hover{text-decoration:underline}
+.dp-section{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin:14px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.dp-owners{font-size:11px;color:var(--text2);line-height:1.7}
 
-/* ══════════════════════════════════════════════════════════════════════════
-   MAP
-══════════════════════════════════════════════════════════════════════════ */
-#map{flex:1;min-height:300px}
+/* ══ MAP ═════════════════════════════════════════════════════════════════════ */
+#map{flex:1;min-height:200px}
 .leaflet-popup-content-wrapper{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;box-shadow:0 4px 20px rgba(0,0,0,.6)}
 .leaflet-popup-tip{background:var(--surface2)}
-.popup-name{font-weight:700;font-size:13px;color:#fff;margin-bottom:6px;font-family:var(--mono)}
-.popup-row{font-size:11px;color:var(--muted);margin:2px 0}
-.popup-row span{color:var(--text)}
-.map-legend{
-  padding:10px 20px;background:var(--surface);border-top:1px solid var(--border);
-  display:flex;flex-wrap:wrap;gap:12px;align-items:center;flex-shrink:0;
-}
-.legend-item{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9px;color:var(--text2);letter-spacing:.04em}
-.legend-dot{width:8px;height:8px;border-radius:50%}
+.pu-name{font-weight:700;font-size:13px;color:#fff;margin-bottom:5px}
+.pu-row{font-size:11px;color:var(--muted);margin:2px 0}
+.pu-row span{color:var(--text)}
+.map-footer{padding:8px 18px;background:var(--surface);border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:12px;align-items:center;flex-shrink:0}
+.leg-item{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9px;color:var(--text2)}
+.leg-dot{width:8px;height:8px;border-radius:50%}
 
-/* ══════════════════════════════════════════════════════════════════════════
-   FOOTER
-══════════════════════════════════════════════════════════════════════════ */
-#footer{
-  height:28px;min-height:28px;background:var(--surface);border-top:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0 20px;flex-shrink:0;
-}
-.footer-left,.footer-right{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.06em}
-.footer-sep{margin:0 6px;opacity:.3}
+/* ══ FOOTER ══════════════════════════════════════════════════════════════════ */
+#footer{height:26px;min-height:26px;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 18px;flex-shrink:0}
+.footer-l,.footer-r{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:.05em}
+.fsep{margin:0 5px;opacity:.3}
 
-/* ── Loading ── */
-.loading{display:flex;align-items:center;justify-content:center;flex:1;flex-direction:column;gap:14px}
-.spinner{width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+/* Loading */
+.loading{display:flex;align-items:center;justify-content:center;flex:1;flex-direction:column;gap:12px}
+.spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
 
-<!-- ════════════════════════════════════════════════════════ TOP BAR -->
+<!-- ════════ TOP BAR ════════ -->
 <div id="topbar">
   <div class="tb-brand">
-    <div class="tb-icon">⚓</div>
+    <div class="tb-icon">⛽</div>
     <div>
-      <div>RIG EXTRACT</div>
-      <div class="tb-brand-sub">OFFSHORE INSTALLATION REGISTRY</div>
+      <div class="tb-title">OIL &amp; GAS EXTRACTION TRACKER</div>
+      <div class="tb-sub">GLOBAL ENERGY MONITOR — MARCH 2026 RELEASE</div>
     </div>
   </div>
   <div class="tb-right">
-    <div class="tb-meta">REGION <span>NORTHERN EUROPE + USA</span></div>
-    <div class="tb-meta">MODEL <span>V2.4</span></div>
-    <div class="tb-status">
-      <div class="tb-status-dot"></div>
-      <span id="agentStatus">LOADING DATA SOURCES…</span>
-    </div>
+    <span class="tb-badge tb-badge-gem">GEM DATA</span>
+    <span class="tb-badge tb-badge-cc">CC BY 4.0</span>
+    <div class="tb-status"><div class="tb-dot"></div><span id="topStatus">LOADING…</span></div>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════════ LAYOUT -->
+<!-- ════════ LAYOUT ════════ -->
 <div id="layout">
 
-  <!-- ══ SIDEBAR ══ -->
+  <!-- ── SIDEBAR ── -->
   <div id="sidebar">
-
-    <!-- Data Authorities -->
-    <div class="sb-section">
-      <div class="sb-label">Data Authorities</div>
-      <div id="authCards"></div>
-    </div>
 
     <!-- Filters -->
     <div class="sb-section">
       <div class="sb-label">Filters</div>
       <div class="sb-field">
         <label>Search</label>
-        <input type="text" id="searchInput" placeholder="Name, operator, type…" oninput="applyFilters()"/>
+        <input type="text" id="searchInput" placeholder="Field name, operator, basin…" oninput="applyFilters()"/>
+      </div>
+      <div class="sb-field">
+        <label>Location</label>
+        <div class="toggle-group">
+          <div class="toggle-btn active" id="tog-all" onclick="setLocation('all')">All</div>
+          <div class="toggle-btn" id="tog-offshore" onclick="setLocation('offshore')">Offshore</div>
+          <div class="toggle-btn" id="tog-onshore" onclick="setLocation('onshore')">Onshore</div>
+        </div>
+      </div>
+      <div class="sb-field">
+        <label>Status</label>
+        <select id="filterStatus" onchange="applyFilters()">
+          <option value="">All statuses</option>
+          <option value="operating">Operating</option>
+          <option value="discovered">Discovered</option>
+          <option value="in-development">In Development</option>
+          <option value="mothballed">Mothballed</option>
+          <option value="decommissioning">Decommissioning</option>
+          <option value="abandoned">Abandoned</option>
+        </select>
+      </div>
+      <div class="sb-field">
+        <label>Fuel Type</label>
+        <select id="filterFuel" onchange="applyFilters()">
+          <option value="">All fuels</option>
+          <option value="oil">Oil</option>
+          <option value="gas">Gas</option>
+          <option value="oil and gas">Oil and Gas</option>
+          <option value="gas and condensate">Gas &amp; Condensate</option>
+        </select>
       </div>
       <div class="sb-field">
         <label>Country</label>
@@ -364,93 +278,81 @@ td{padding:9px 14px;vertical-align:middle}
         </select>
       </div>
       <div class="sb-field">
-        <label>Status</label>
-        <select id="filterStatus" onchange="applyFilters()">
-          <option value="">All statuses</option>
-          <option value="Active">Active</option>
-          <option value="Decommissioned">Decommissioned</option>
-          <option value="Inactive/Decommissioned">Inactive / Decommissioned</option>
-          <option value="Planned/Under Construction">Planned / Under Construction</option>
-          <option value="Unknown">Unknown</option>
-        </select>
-      </div>
-      <div class="sb-field">
-        <label>Type</label>
-        <select id="filterType" onchange="applyFilters()">
+        <label>Production Type</label>
+        <select id="filterProdType" onchange="applyFilters()">
           <option value="">All types</option>
+          <option value="conventional">Conventional</option>
+          <option value="unconventional">Unconventional</option>
         </select>
       </div>
-      <a class="reset-link" onclick="clearFilters()">↺ Reset all</a>
+      <a class="reset-link" onclick="clearFilters()">↺ Reset all filters</a>
     </div>
 
-    <!-- Bottom info -->
-    <div class="sb-info">
-      <div class="sb-info-row">LAST SYNC <span id="syncDate">—</span></div>
-      <div class="sb-info-row">RECORDS <span id="sbTotal">—</span></div>
-      <div class="sb-info-row">GEO COVERAGE <span id="sbGeo">—</span></div>
+    <!-- Live stats -->
+    <div class="sb-section">
+      <div class="sb-label">Live Stats</div>
+      <div class="sb-stat-row"><span class="sb-stat-label">Showing</span><span class="sb-stat-val c-white" id="sb-showing">—</span></div>
+      <div class="sb-stat-row"><span class="sb-stat-label">Operating</span><span class="sb-stat-val c-green" id="sb-operating">—</span></div>
+      <div class="sb-stat-row"><span class="sb-stat-label">In Development</span><span class="sb-stat-val c-amber" id="sb-dev">—</span></div>
+      <div class="sb-stat-row"><span class="sb-stat-label">Offshore</span><span class="sb-stat-val c-accent" id="sb-offshore">—</span></div>
+      <div class="sb-stat-row"><span class="sb-stat-label">With Coordinates</span><span class="sb-stat-val" style="color:var(--text2)" id="sb-geo">—</span></div>
     </div>
-  </div>
 
-  <!-- ══ MAIN ══ -->
+    <!-- Top countries -->
+    <div class="sb-section" style="flex:1">
+      <div class="sb-label">Top Countries</div>
+      <div id="countryBars"></div>
+    </div>
+
+  </div><!-- /sidebar -->
+
+  <!-- ── MAIN ── -->
   <div id="main">
 
-    <!-- Panel header -->
     <div id="panel-header">
       <div class="ph-left">
-        <div class="ph-title">Northern Europe &amp; USA</div>
-        <div class="ph-sub">Verified offshore infrastructure records — SODIR · BSEE · NSTA · ENS · NLOG</div>
+        <div class="ph-title" id="panelTitle">Global Oil &amp; Gas Fields</div>
+        <div class="ph-sub" id="panelSub">Source: Global Energy Monitor · CC BY 4.0 · March 2026</div>
       </div>
       <div class="ph-actions">
-        <button class="btn btn-outline" onclick="exportCSV()">CSV EXPORT</button>
-        <button class="btn btn-accent" onclick="exportJSON()">JSON EXPORT</button>
+        <button class="btn btn-ghost" onclick="exportCSV()">CSV Export</button>
+        <button class="btn btn-accent" onclick="exportJSON()">JSON Export</button>
       </div>
     </div>
 
-    <!-- Stats row -->
     <div id="stats-row">
-      <div class="stat-cell">
-        <div class="stat-cell-num white" id="st-total">—</div>
-        <div class="stat-cell-label">Total Installations</div>
-      </div>
-      <div class="stat-cell">
-        <div class="stat-cell-num green" id="st-active">—</div>
-        <div class="stat-cell-label">Active Assets</div>
-      </div>
-      <div class="stat-cell">
-        <div class="stat-cell-num" id="st-countries">—</div>
-        <div class="stat-cell-label">Countries</div>
-      </div>
-      <div class="stat-cell">
-        <div class="stat-cell-num amber" id="st-sources">—</div>
-        <div class="stat-cell-label">Data Sources</div>
-      </div>
+      <div class="sc"><div class="sc-num c-white" id="st-total">—</div><div class="sc-lbl">Total Fields</div></div>
+      <div class="sc"><div class="sc-num c-green" id="st-operating">—</div><div class="sc-lbl">Operating</div></div>
+      <div class="sc"><div class="sc-num c-amber" id="st-dev">—</div><div class="sc-lbl">In Development</div></div>
+      <div class="sc"><div class="sc-num c-accent" id="st-offshore">—</div><div class="sc-lbl">Offshore</div></div>
+      <div class="sc"><div class="sc-num c-purple" id="st-countries">—</div><div class="sc-lbl">Countries</div></div>
     </div>
 
-    <!-- Tab bar -->
     <div id="tab-bar">
-      <div class="tab active" onclick="switchTab('registry')">Registry <span class="tab-count" id="tc-registry">—</span></div>
-      <div class="tab" onclick="switchTab('collection')">Collection Map</div>
+      <div class="tab active" onclick="switchTab('registry')">Registry <span class="tc" id="tc-registry">—</span></div>
+      <div class="tab" onclick="switchTab('map')">Map View</div>
       <div class="tab" onclick="switchTab('analytics')">Analytics</div>
     </div>
 
-    <!-- Tab content -->
     <div id="tab-content">
 
       <!-- ── REGISTRY ── -->
       <div id="tab-registry" class="tab-panel active">
         <div class="result-bar">
-          <div class="result-bar-text">SHOWING <span id="resultCount">—</span> INSTALLATIONS</div>
-          <div class="result-bar-text" id="activeFilterLabel"></div>
+          <div class="result-bar-text">SHOWING <span id="resultCount">—</span> FIELDS</div>
+          <div class="result-bar-text" id="activeFilterLabel" style="color:var(--accent2)"></div>
         </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th onclick="sortBy('installation_name')">Installation <span class="sort-icon" id="sort-installation_name"></span></th>
-                <th onclick="sortBy('installation_type')">Type / Status <span class="sort-icon" id="sort-installation_type"></span></th>
-                <th onclick="sortBy('operator')">Operator <span class="sort-icon" id="sort-operator"></span></th>
-                <th onclick="sortBy('region')">Region <span class="sort-icon" id="sort-region"></span></th>
-                <th>Primary Source</th>
+                <th onclick="sortBy('installation_name')">Field Name <span class="si" id="sort-installation_name"></span></th>
+                <th onclick="sortBy('country')">Country <span class="si" id="sort-country"></span></th>
+                <th onclick="sortBy('status')">Status <span class="si" id="sort-status"></span></th>
+                <th onclick="sortBy('fuel_type')">Fuel <span class="si" id="sort-fuel_type"></span></th>
+                <th onclick="sortBy('operator')">Operator <span class="si" id="sort-operator"></span></th>
+                <th onclick="sortBy('year_production_start')">Prod. Start <span class="si" id="sort-year_production_start"></span></th>
+                <th onclick="sortBy('onshore_offshore')">Location <span class="si" id="sort-onshore_offshore"></span></th>
               </tr>
             </thead>
             <tbody id="tableBody"></tbody>
@@ -458,412 +360,462 @@ td{padding:9px 14px;vertical-align:middle}
         </div>
         <div class="pager">
           <div class="pager-info">PAGE <span id="pageInfo">—</span></div>
+          <select class="page-size-sel" id="pageSizeSel" onchange="changePageSize()">
+            <option value="50">50 / page</option>
+            <option value="100">100 / page</option>
+            <option value="200">200 / page</option>
+          </select>
           <button class="pager-btn" id="prevBtn" onclick="prevPage()">← PREV</button>
           <button class="pager-btn" id="nextBtn" onclick="nextPage()">NEXT →</button>
         </div>
       </div>
 
       <!-- ── MAP ── -->
-      <div id="tab-collection" class="tab-panel" style="display:none;flex-direction:column">
-        <div id="map" style="flex:1"></div>
-        <div class="map-legend" id="mapLegend"></div>
+      <div id="tab-map" class="tab-panel" style="display:none">
+        <div id="map"></div>
+        <div class="map-footer" id="mapFooter">
+          <div class="leg-item"><div class="leg-dot" style="background:#ff9933"></div>Oil</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#33aaff"></div>Gas</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#cc77ff"></div>Oil &amp; Gas</div>
+          <div class="leg-item"><div class="leg-dot" style="background:#33ddaa"></div>Gas &amp; Condensate</div>
+          <div class="leg-item" style="margin-left:auto;color:var(--muted);font-size:9px;font-family:var(--mono)" id="mapCount"></div>
+        </div>
       </div>
 
       <!-- ── ANALYTICS ── -->
       <div id="tab-analytics" class="tab-panel" style="display:none">
-        <div class="analytics-wrap">
-          <div class="section-header">Breakdown by country</div>
-          <div id="countryGrid" class="breakdown-grid"></div>
-          <div class="section-header">Installation types (top 12)</div>
-          <div id="typeGrid" class="breakdown-grid"></div>
-          <div class="section-header">Status distribution</div>
-          <div id="statusGrid" class="breakdown-grid"></div>
+        <div style="padding:18px;overflow:auto">
+          <div id="an-section-label" class="sb-label" style="margin-bottom:12px;font-size:10px">Top Countries</div>
+          <div id="an-country" style="margin-bottom:24px"></div>
+          <div class="sb-label" style="margin-bottom:12px;font-size:10px">Status Distribution</div>
+          <div id="an-status" style="margin-bottom:24px;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px"></div>
+          <div class="sb-label" style="margin-bottom:12px;font-size:10px">Fuel Type</div>
+          <div id="an-fuel" style="margin-bottom:24px;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px"></div>
+          <div class="sb-label" style="margin-bottom:12px;font-size:10px">Top Operators</div>
+          <div id="an-operators" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px"></div>
         </div>
       </div>
 
     </div><!-- /tab-content -->
 
-    <!-- Footer -->
     <div id="footer">
-      <div class="footer-left">
-        DATA MODEL V2.4.1
-        <span class="footer-sep">|</span>
-        REGION_LOCK: NOEU+USA
-        <span class="footer-sep">|</span>
-        AGENT_MODE: SOURCE_ONLY
-        <span class="footer-sep">|</span>
-        SOURCES: <span id="footerSources">—</span>
+      <div class="footer-l">
+        SOURCE: GLOBAL ENERGY MONITOR
+        <span class="fsep">|</span>MARCH 2026
+        <span class="fsep">|</span>LICENSE: CC BY 4.0
+        <span class="fsep">|</span><span id="footerCount">—</span> RECORDS
       </div>
-      <div class="footer-right">© RIG-EXTRACT OFFSHORE SYSTEMS — DATA IS PROVIDED AS-IS FROM REGULATORY AUTHORITIES</div>
+      <div class="footer-r">FOR EDUCATIONAL USE — gem.wiki</div>
     </div>
-
   </div><!-- /main -->
 </div><!-- /layout -->
 
+<!-- ════════ DETAIL OVERLAY ════════ -->
+<div id="detail-overlay" onclick="closeDetail(event)">
+  <div id="detail-panel">
+    <button class="dp-close" onclick="closeDetail()">✕</button>
+    <div class="dp-title" id="dp-title"></div>
+    <div class="dp-country" id="dp-country"></div>
+    <div class="dp-grid" id="dp-grid"></div>
+    <div id="dp-owners-section"></div>
+  </div>
+</div>
+
 <script>
-// ── State ────────────────────────────────────────────────────────────────────
+// ── State ─────────────────────────────────────────────────────────────────────
 let allData = [], filtered = [];
 let sortCol = 'installation_name', sortDir = 1;
-let page = 0;
-const PAGE_SIZE = 50;
+let page = 0, PAGE_SIZE = 50;
 let mapInited = false, leafletMap, markerLayer;
-let activeAuthFilter = null;
+let locationFilter = 'all';
 
-const SOURCE_AUTHORITIES = [
-  { key: 'SODIR',       label: 'SODIR (NPD)',      country: 'Norway',         color: '#ef4444', url: 'https://www.sodir.no' },
-  { key: 'NSTA',        label: 'UK NSTA',          country: 'United Kingdom', color: '#3b82f6', url: 'https://www.nstauthority.co.uk' },
-  { key: 'ENS',         label: 'DEA / ENS',        country: 'Denmark',        color: '#f59e0b', url: 'https://ens.dk' },
-  { key: 'NLOG',        label: 'NLOG',             country: 'Netherlands',    color: '#f97316', url: 'https://www.nlog.nl' },
-  { key: 'BSEE',        label: 'BSEE',             country: 'United States',  color: '#8b5cf6', url: 'https://www.bsee.gov' },
-];
-
-const COUNTRY_COLORS = {
-  'Norway':'#ef4444','United Kingdom':'#3b82f6','Denmark':'#f59e0b',
-  'Netherlands':'#f97316','United States':'#8b5cf6'
+const FUEL_COLORS = {
+  'oil':'#ff9933','gas':'#33aaff','oil and gas':'#cc77ff',
+  'gas and condensate':'#33ddaa'
 };
-function countryColor(c){ return COUNTRY_COLORS[c] || '#00c8ff'; }
+function fuelColor(f){ return FUEL_COLORS[(f||'').toLowerCase()] || '#aaa'; }
 
-// ── Status normalisation ─────────────────────────────────────────────────────
-function normalizeStatus(raw) {
-  if (!raw || raw === 'None') return 'Unknown';
-  const v = raw.toUpperCase().trim();
-  if (['IN SERVICE', 'ACTIVE', 'PRODUCING'].includes(v))             return 'Active';
-  if (['DECOMMISSIONED','REMOVED','DISPOSAL COMPLETED',
-       'ABANDONED IN PLACE','PARTLY REMOVED'].includes(v))           return 'Decommissioned';
-  if (['SHUT DOWN','LAID UP','INACTIVE'].includes(v))                return 'Inactive/Decommissioned';
-  if (['INSTALLATION','FABRICATION','FUTURE',
-       'UNDER CONSTRUCTION','PLANNED'].includes(v))                  return 'Planned/Under Construction';
-  if (v === 'UNKNOWN')                                               return 'Unknown';
-  return raw; // keep as-is if not recognised
-}
+const STATUS_CLASS = {
+  'operating':'s-operating','in-development':'s-development',
+  'discovered':'s-discovered','mothballed':'s-mothballed',
+  'decommissioning':'s-decommissioning','abandoned':'s-abandoned',
+  'cancelled':'s-abandoned','exploration':'s-discovered',
+  'underground gas storage':'s-mothballed'
+};
+function statusClass(s){ return STATUS_CLASS[(s||'').toLowerCase()] || 's-other'; }
 
-// ── Load data ────────────────────────────────────────────────────────────────
-fetch('global_offshore_inventory_local.json')
-  .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-  .then(json => {
-    allData = (json.inventory || []).map(d => ({ ...d, status: normalizeStatus(d.status) }));
+// ── Load data ─────────────────────────────────────────────────────────────────
+fetch('gem_inventory.json')
+  .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+  .then(json=>{
+    allData = json.inventory || [];
     init();
   })
-  .catch(err => {
+  .catch(err=>{
     document.getElementById('tab-registry').innerHTML =
       `<div class="loading">
-        <div style="font-size:32px;color:#ef4444">⚠</div>
-        <div style="font-size:15px;font-weight:700;color:#fff">DATA LOAD FAILURE</div>
-        <div style="font-family:var(--mono);font-size:11px;color:var(--muted)">
-          Ensure <code style="color:var(--accent)">global_offshore_inventory_local.json</code> is in the same directory.<br>
+        <div style="font-size:28px;color:var(--red)">⚠</div>
+        <div style="font-size:14px;font-weight:700;color:#fff">gem_inventory.json not found</div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center;max-width:380px">
+          Make sure <code style="color:var(--accent)">gem_inventory.json</code> is in the same folder as this HTML file.<br>
           Error: ${err.message}
         </div>
       </div>`;
-    document.getElementById('agentStatus').textContent = 'DATA SOURCE UNAVAILABLE';
+    document.getElementById('topStatus').textContent = 'DATA NOT FOUND';
   });
 
-// ── Init ─────────────────────────────────────────────────────────────────────
-function init() {
+// ── Init ──────────────────────────────────────────────────────────────────────
+function init(){
   filtered = [...allData];
-
-  // Top stats
-  const active = allData.filter(d => d.status === 'Active').length;
-  const countries = new Set(allData.map(d => d.country)).size;
-  const sources = new Set(allData.map(d => d.source_authority).filter(Boolean)).size;
-
-  document.getElementById('st-total').textContent = allData.length.toLocaleString();
-  document.getElementById('st-active').textContent = active.toLocaleString();
-  document.getElementById('st-countries').textContent = countries;
-  document.getElementById('st-sources').textContent = sources || SOURCE_AUTHORITIES.length;
-
-  // Sidebar bottom
-  document.getElementById('syncDate').textContent = new Date().toISOString().slice(0,10);
-  document.getElementById('sbTotal').textContent = allData.length.toLocaleString();
-  const withCoords = allData.filter(d => d.latitude && d.longitude).length;
-  document.getElementById('sbGeo').textContent = Math.round(withCoords / allData.length * 100) + '%';
-  document.getElementById('footerSources').textContent = sources || SOURCE_AUTHORITIES.length;
-  document.getElementById('agentStatus').textContent = 'REGISTRY SYNCHRONIZED — ' + allData.length.toLocaleString() + ' RECORDS';
-
-  buildAuthCards();
-  buildFilterOptions();
-  buildAnalytics();
+  buildCountryFilter();
+  updateStats();
+  buildSidebarCountries();
   renderTable();
+  document.getElementById('topStatus').textContent =
+    'LOADED — ' + allData.length.toLocaleString() + ' FIELDS';
+  document.getElementById('footerCount').textContent = allData.length.toLocaleString();
 }
 
-// ── Authority cards ──────────────────────────────────────────────────────────
-function buildAuthCards() {
-  const bySrc = {};
-  allData.forEach(d => {
-    const s = d.source_authority || '';
-    SOURCE_AUTHORITIES.forEach(a => {
-      if (s.includes(a.key)) bySrc[a.key] = (bySrc[a.key] || 0) + 1;
-    });
-    if (!Object.keys(bySrc).length) bySrc['OTHER'] = (bySrc['OTHER'] || 0) + 1;
+// ── Stats ─────────────────────────────────────────────────────────────────────
+function updateStats(){
+  const f = filtered;
+  const operating = f.filter(d=>d.status==='operating').length;
+  const dev = f.filter(d=>['in-development','discovered'].includes(d.status)).length;
+  const offshore = f.filter(d=>d.onshore_offshore==='offshore').length;
+  const countries = new Set(f.map(d=>d.country).filter(Boolean)).size;
+
+  set('st-total',   f.length.toLocaleString());
+  set('st-operating', operating.toLocaleString());
+  set('st-dev',     dev.toLocaleString());
+  set('st-offshore', offshore.toLocaleString());
+  set('st-countries', countries);
+
+  // Sidebar live stats
+  set('sb-showing',   f.length.toLocaleString());
+  set('sb-operating', operating.toLocaleString());
+  set('sb-dev',       dev.toLocaleString());
+  set('sb-offshore',  offshore.toLocaleString());
+  const withCoords = f.filter(d=>d.latitude&&d.longitude).length;
+  set('sb-geo', Math.round(withCoords/Math.max(f.length,1)*100)+'%');
+
+  // Active filter label
+  const parts = [];
+  if(locationFilter!=='all') parts.push(locationFilter.toUpperCase());
+  const st = document.getElementById('filterStatus').value;
+  const fu = document.getElementById('filterFuel').value;
+  const co = document.getElementById('filterCountry').value;
+  const pt = document.getElementById('filterProdType').value;
+  const q  = document.getElementById('searchInput').value;
+  if(st) parts.push(st.toUpperCase());
+  if(fu) parts.push(fu.toUpperCase());
+  if(co) parts.push(co.toUpperCase());
+  if(pt) parts.push(pt.toUpperCase());
+  if(q)  parts.push('"'+q+'"');
+  document.getElementById('activeFilterLabel').textContent = parts.length ? 'FILTER: '+parts.join(' · ') : '';
+}
+
+function buildSidebarCountries(){
+  const byCo = {};
+  filtered.forEach(d=>{ if(d.country) byCo[d.country]=(byCo[d.country]||0)+1; });
+  const sorted = Object.entries(byCo).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  const max = sorted[0]?.[1] || 1;
+  document.getElementById('countryBars').innerHTML = sorted.map(([c,n])=>`
+    <div class="country-bar-item">
+      <div class="cbi-header"><span class="cbi-name">${c}</span><span class="cbi-count">${n.toLocaleString()}</span></div>
+      <div class="cbi-track"><div class="cbi-fill" style="width:${(n/max*100).toFixed(0)}%;background:${fuelColor('oil and gas')}88"></div></div>
+    </div>`).join('');
+}
+
+// ── Country dropdown ──────────────────────────────────────────────────────────
+function buildCountryFilter(){
+  const countries = [...new Set(allData.map(d=>d.country).filter(Boolean))].sort();
+  const sel = document.getElementById('filterCountry');
+  countries.forEach(c=>{ const o=document.createElement('option'); o.value=o.textContent=c; sel.appendChild(o); });
+}
+
+// ── Filters ───────────────────────────────────────────────────────────────────
+function setLocation(v){
+  locationFilter = v;
+  ['all','offshore','onshore'].forEach(x=>{
+    document.getElementById('tog-'+x).classList.toggle('active', x===v);
   });
-
-  document.getElementById('authCards').innerHTML = SOURCE_AUTHORITIES.map(a => {
-    const count = bySrc[a.key] || 0;
-    return `<div class="auth-card" id="auth-${a.key}" onclick="filterByAuthority('${a.key}')">
-      <div class="auth-dot" style="background:${a.color}"></div>
-      <div class="auth-info">
-        <div class="auth-name">${a.label}</div>
-        <div class="auth-sub">${a.country}</div>
-      </div>
-      <div class="auth-count">${count || '—'}</div>
-    </div>`;
-  }).join('');
-}
-
-function filterByAuthority(key) {
-  if (activeAuthFilter === key) {
-    activeAuthFilter = null;
-    document.querySelectorAll('.auth-card').forEach(c => c.classList.remove('active-filter'));
-  } else {
-    activeAuthFilter = key;
-    document.querySelectorAll('.auth-card').forEach(c => c.classList.remove('active-filter'));
-    document.getElementById('auth-' + key)?.classList.add('active-filter');
-  }
   applyFilters();
 }
 
-// ── Filters ──────────────────────────────────────────────────────────────────
-function buildFilterOptions() {
-  const countries = [...new Set(allData.map(d => d.country))].sort();
-  const cSel = document.getElementById('filterCountry');
-  countries.forEach(c => { const o = document.createElement('option'); o.value = o.textContent = c; cSel.appendChild(o); });
-
-  const types = [...new Set(allData.map(d => d.installation_type).filter(Boolean))].sort();
-  const tSel = document.getElementById('filterType');
-  types.slice(0,30).forEach(t => { const o = document.createElement('option'); o.value = o.textContent = t; tSel.appendChild(o); });
-}
-
-function applyFilters() {
+function applyFilters(){
   const q  = document.getElementById('searchInput').value.toLowerCase();
-  const co = document.getElementById('filterCountry').value;
   const st = document.getElementById('filterStatus').value;
-  const ty = document.getElementById('filterType').value;
+  const fu = document.getElementById('filterFuel').value;
+  const co = document.getElementById('filterCountry').value;
+  const pt = document.getElementById('filterProdType').value;
 
-  filtered = allData.filter(d => {
-    if (q && !`${d.installation_name} ${d.country} ${d.installation_type} ${d.operator}`.toLowerCase().includes(q)) return false;
-    if (co && d.country !== co) return false;
-    if (st && d.status !== st) return false;
-    if (ty && d.installation_type !== ty) return false;
-    if (activeAuthFilter) {
-      const src = d.source_authority || '';
-      if (!src.includes(activeAuthFilter)) return false;
-    }
+  filtered = allData.filter(d=>{
+    if(q && !`${d.installation_name} ${d.operator} ${d.basin} ${d.block} ${d.country} ${d.region}`.toLowerCase().includes(q)) return false;
+    if(st && d.status !== st) return false;
+    if(fu && d.fuel_type !== fu) return false;
+    if(co && d.country !== co) return false;
+    if(pt && d.production_type !== pt) return false;
+    if(locationFilter==='offshore' && d.onshore_offshore!=='offshore') return false;
+    if(locationFilter==='onshore'  && d.onshore_offshore!=='onshore')  return false;
     return true;
   });
   page = 0;
+  updateStats();
+  buildSidebarCountries();
   renderTable();
-
-  // Active filter label
-  const filters = [co, st, ty, activeAuthFilter].filter(Boolean);
-  document.getElementById('activeFilterLabel').textContent = filters.length
-    ? 'FILTER: ' + filters.join(' · ')
-    : '';
+  if(mapInited) renderMapMarkers();
 }
 
-function clearFilters() {
-  document.getElementById('searchInput').value = '';
-  document.getElementById('filterCountry').value = '';
-  document.getElementById('filterStatus').value = '';
-  document.getElementById('filterType').value = '';
-  activeAuthFilter = null;
-  document.querySelectorAll('.auth-card').forEach(c => c.classList.remove('active-filter'));
+function clearFilters(){
+  document.getElementById('searchInput').value='';
+  document.getElementById('filterStatus').value='';
+  document.getElementById('filterFuel').value='';
+  document.getElementById('filterCountry').value='';
+  document.getElementById('filterProdType').value='';
+  locationFilter='all';
+  ['all','offshore','onshore'].forEach(x=>document.getElementById('tog-'+x).classList.toggle('active',x==='all'));
   applyFilters();
 }
 
 // ── Sort ──────────────────────────────────────────────────────────────────────
-function sortBy(col) {
-  if (sortCol === col) sortDir *= -1;
-  else { sortCol = col; sortDir = 1; }
-  document.querySelectorAll('.sort-icon').forEach(el => el.textContent = '');
-  document.querySelectorAll('th').forEach(el => el.classList.remove('sorted'));
-  const icon = document.getElementById('sort-' + col);
-  if (icon) { icon.textContent = sortDir === 1 ? '▲' : '▼'; icon.closest('th').classList.add('sorted'); }
-  filtered.sort((a, b) => {
-    const av = a[col] ?? '', bv = b[col] ?? '';
-    if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * sortDir;
-    return String(av).localeCompare(String(bv)) * sortDir;
+function sortBy(col){
+  if(sortCol===col) sortDir*=-1; else{ sortCol=col; sortDir=1; }
+  document.querySelectorAll('.si').forEach(e=>e.textContent='');
+  document.querySelectorAll('th').forEach(e=>e.classList.remove('sorted'));
+  const icon = document.getElementById('sort-'+col);
+  if(icon){ icon.textContent=sortDir===1?'▲':'▼'; icon.closest('th').classList.add('sorted'); }
+  filtered.sort((a,b)=>{
+    const av=a[col]??'', bv=b[col]??'';
+    if(typeof av==='number'&&typeof bv==='number') return (av-bv)*sortDir;
+    return String(av).localeCompare(String(bv))*sortDir;
   });
-  page = 0;
-  renderTable();
+  page=0; renderTable();
 }
 
 // ── Table render ──────────────────────────────────────────────────────────────
-function renderTable() {
-  const start = page * PAGE_SIZE, end = start + PAGE_SIZE;
-  const rows = filtered.slice(start, end);
-  const total = filtered.length;
-  const shown = Math.min(end, total);
+function renderTable(){
+  const start=page*PAGE_SIZE, end=start+PAGE_SIZE;
+  const rows=filtered.slice(start,end);
+  const total=filtered.length;
 
-  document.getElementById('resultCount').innerHTML = `<span>${shown.toLocaleString()}</span> OF <span>${total.toLocaleString()}</span>`;
-  document.getElementById('tc-registry').textContent = total.toLocaleString();
+  set('resultCount', `<span>${Math.min(end,total).toLocaleString()}</span> OF <span>${total.toLocaleString()}</span>`);
+  set('tc-registry', total.toLocaleString());
 
-  document.getElementById('tableBody').innerHTML = rows.map(d => {
-    const typeTrimmed = (d.installation_type || 'UNKNOWN').substring(0, 22).toUpperCase();
-    const statusClass = d.status === 'Active' ? 's-active'
-      : ['Decommissioned','Inactive/Decommissioned'].includes(d.status) ? 's-decomm'
-      : 's-unknown';
-    const statusDot = d.status === 'Active' ? '●' : '○';
-    const statusLabel = d.status === 'Active' ? 'ACTIVE'
-      : d.status === 'Decommissioned' ? 'DECOMM'
-      : d.status === 'Inactive/Decommissioned' ? 'INACTIVE'
-      : 'UNKNOWN';
+  document.getElementById('tableBody').innerHTML = rows.map((d,i)=>{
+    const sc = statusClass(d.status);
+    const statusDot = d.status==='operating'?'●':d.status==='in-development'?'◆':
+      d.status==='discovered'?'◎':'○';
+    const statusLabel = (d.status||'unknown').toUpperCase().replace('-',' ');
 
-    const srcAuth = d.source_authority || '';
-    const srcKey = SOURCE_AUTHORITIES.find(a => srcAuth.includes(a.key));
-    const srcLabel = srcKey ? srcKey.label : (srcAuth.slice(0,14) || '—');
-    const srcColor = srcKey ? srcKey.color : '#00c8ff';
+    const fuelCls = d.fuel_type==='oil'?'f-oil':d.fuel_type==='gas'?'f-gas':
+      d.fuel_type==='gas and condensate'?'f-cond':'f-both';
+    const fuelLabel = (d.fuel_type||'?').toUpperCase();
 
-    const countryCode = {
-      'Norway':'NO','United Kingdom':'GB','Denmark':'DK',
-      'Netherlands':'NL','United States':'US'
-    }[d.country] || d.country?.slice(0,2).toUpperCase() || '??';
+    const locColor = d.onshore_offshore==='offshore'?'#33aaff':
+      d.onshore_offshore==='onshore'?'#aaa':'#555';
+    const locLabel = d.onshore_offshore ? d.onshore_offshore.toUpperCase() : '—';
 
-    return `<tr>
+    return `<tr onclick="openDetail(${start+i})">
       <td>
-        <div class="inst-name" title="${esc(d.installation_name)}">${esc(d.installation_name)}</div>
-        <div class="inst-meta">${countryCode}<span class="country-sep">//</span>${esc(d.region || '—')}</div>
+        <div class="f-name" title="${esc(d.installation_name)}">${esc(d.installation_name)}</div>
+        <div class="f-meta">${esc(d.basin||'—')}</div>
       </td>
-      <td>
-        <div class="type-badge" title="${esc(d.installation_type)}">${typeTrimmed}</div>
-        <span class="status-badge ${statusClass}">${statusDot} ${statusLabel}</span>
-      </td>
-      <td>
-        <div class="op-name" title="${esc(d.operator)}">${esc(d.operator || '—')}</div>
-        ${d.year_installed ? `<div class="op-year">EST. ${d.year_installed}</div>` : '<div class="op-year">EST. —</div>'}
-      </td>
-      <td style="font-size:11px;color:var(--text2)">${esc(d.region || '—')}</td>
-      <td>
-        <a class="src-link" style="color:${srcColor}" href="${srcKey?.url || '#'}" target="_blank" rel="noopener">${srcLabel}</a>
-      </td>
+      <td style="color:var(--text2);white-space:nowrap">${esc(d.country||'—')}</td>
+      <td><span class="sbadge ${sc}">${statusDot} ${statusLabel}</span></td>
+      <td><span class="fbadge ${fuelCls}">${fuelLabel}</span></td>
+      <td style="color:var(--text2);font-size:11px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(d.operator||'—')}</td>
+      <td style="font-family:var(--mono);color:var(--muted)">${d.year_production_start||'—'}</td>
+      <td><span class="f-meta" style="color:${locColor}"><span class="loc-dot" style="background:${locColor}"></span>${locLabel}</span></td>
     </tr>`;
   }).join('');
 
-  const totalPages = Math.ceil(total / PAGE_SIZE);
-  document.getElementById('pageInfo').innerHTML = `<span>${page + 1}</span> / <span>${totalPages || 1}</span>`;
-  document.getElementById('prevBtn').disabled = page === 0;
-  document.getElementById('nextBtn').disabled = page >= totalPages - 1;
+  const totalPages=Math.ceil(total/PAGE_SIZE)||1;
+  set('pageInfo',`<span>${page+1}</span> / <span>${totalPages}</span>`);
+  document.getElementById('prevBtn').disabled=page===0;
+  document.getElementById('nextBtn').disabled=page>=totalPages-1;
 }
 
-function prevPage(){ if (page > 0) { page--; renderTable(); } }
-function nextPage(){ if ((page + 1) * PAGE_SIZE < filtered.length) { page++; renderTable(); } }
-function esc(s){ return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function changePageSize(){ PAGE_SIZE=parseInt(document.getElementById('pageSizeSel').value); page=0; renderTable(); }
+function prevPage(){ if(page>0){page--;renderTable();} }
+function nextPage(){ if((page+1)*PAGE_SIZE<filtered.length){page++;renderTable();} }
+function set(id,v){ const el=document.getElementById(id); if(el) el.innerHTML=String(v); }
+function esc(s){ return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-// ── Analytics ─────────────────────────────────────────────────────────────────
-function buildAnalytics() {
-  // Country
-  const byCo = {};
-  allData.forEach(d => { byCo[d.country] = (byCo[d.country] || 0) + 1; });
-  const maxCo = Math.max(...Object.values(byCo));
-  document.getElementById('countryGrid').innerHTML = Object.entries(byCo)
-    .sort((a,b) => b[1]-a[1])
-    .map(([c,n]) => `
-      <div class="bc-card" style="border-left-color:${countryColor(c)}">
-        <div class="bc-country">${c}</div>
-        <div class="bc-count" style="color:${countryColor(c)}">${n.toLocaleString()}</div>
-        <div class="bc-bar"><div class="bc-fill" style="width:${(n/maxCo*100).toFixed(0)}%;background:${countryColor(c)}"></div></div>
-      </div>`).join('');
+// ── Detail panel ──────────────────────────────────────────────────────────────
+function openDetail(idx){
+  const d = filtered[idx];
+  if(!d) return;
+  set('dp-title', esc(d.installation_name));
 
-  // Type
-  const byType = {};
-  allData.forEach(d => { const t = d.installation_type || 'Unknown'; byType[t] = (byType[t]||0)+1; });
-  const maxType = Math.max(...Object.values(byType));
-  document.getElementById('typeGrid').innerHTML = Object.entries(byType)
-    .sort((a,b) => b[1]-a[1]).slice(0,12)
-    .map(([t,n]) => `
-      <div class="bc-card" style="border-left-color:var(--accent2)">
-        <div class="bc-country" style="font-size:10px">${t}</div>
-        <div class="bc-count">${n.toLocaleString()}</div>
-        <div class="bc-bar"><div class="bc-fill" style="width:${(n/maxType*100).toFixed(0)}%;background:var(--accent2)"></div></div>
-      </div>`).join('');
+  const sub = [d.country, d.onshore_offshore, d.fuel_type].filter(Boolean)
+    .map(x=>x.toUpperCase()).join('  ·  ');
+  set('dp-country', sub);
 
-  // Status
-  const bySt = {};
-  allData.forEach(d => { const s = d.status || 'Unknown'; bySt[s] = (bySt[s]||0)+1; });
-  const maxSt = Math.max(...Object.values(bySt));
-  const stColors = {'Active':'#00e676','Decommissioned':'#666','Inactive/Decommissioned':'#888','Unknown':'#3a6a8a'};
-  document.getElementById('statusGrid').innerHTML = Object.entries(bySt)
-    .sort((a,b) => b[1]-a[1])
-    .map(([s,n]) => `
-      <div class="bc-card" style="border-left-color:${stColors[s]||'#aaa'}">
-        <div class="bc-country">${s}</div>
-        <div class="bc-count" style="color:${stColors[s]||'#aaa'}">${n.toLocaleString()}</div>
-        <div class="bc-bar"><div class="bc-fill" style="width:${(n/maxSt*100).toFixed(0)}%;background:${stColors[s]||'#aaa'}"></div></div>
-      </div>`).join('');
+  const fields = [
+    ['Status', `<span class="sbadge ${statusClass(d.status)}">${(d.status||'?').toUpperCase()}</span>`],
+    ['Fuel Type', `<span class="fbadge ${d.fuel_type==='oil'?'f-oil':d.fuel_type==='gas'?'f-gas':d.fuel_type==='gas and condensate'?'f-cond':'f-both'}">${(d.fuel_type||'?').toUpperCase()}</span>`],
+    ['Operator', esc(d.operator||'—')],
+    ['Country', esc(d.country||'—')],
+    ['Region / Province', esc(d.region||'—')],
+    ['Basin', esc(d.basin||'—')],
+    ['Block(s)', esc(d.block||'—')],
+    ['Production Type', esc(d.production_type||'—')],
+    ['Discovery Year', d.year_discovered||'—'],
+    ['Production Start', d.year_production_start||'—'],
+    ['Location', d.onshore_offshore ? d.onshore_offshore.toUpperCase() : '—'],
+    ['Coordinates', d.latitude ? `${d.latitude.toFixed(4)}, ${d.longitude.toFixed(4)}` : '—'],
+    ['GEM Unit ID', `<code style="font-family:var(--mono);font-size:10px;color:var(--muted)">${esc(d.id||'—')}</code>`],
+    ['Wiki', d.wiki_url ? `<a href="${esc(d.wiki_url)}" target="_blank">gem.wiki ↗</a>` : '—'],
+  ];
+
+  set('dp-grid', fields.map(([label,val])=>`
+    <div class="dp-field">
+      <div class="dp-field-label">${label}</div>
+      <div class="dp-field-val">${val}</div>
+    </div>`).join(''));
+
+  let ownersHtml = '';
+  if(d.owners){
+    ownersHtml = `<div class="dp-section">Ownership</div><div class="dp-owners">${esc(d.owners)}</div>`;
+  }
+  set('dp-owners-section', ownersHtml);
+
+  document.getElementById('detail-overlay').classList.add('open');
 }
 
-// ── Map ──────────────────────────────────────────────────────────────────────
-function initMap() {
-  if (mapInited) return;
-  mapInited = true;
+function closeDetail(e){
+  if(!e || e.target===document.getElementById('detail-overlay'))
+    document.getElementById('detail-overlay').classList.remove('open');
+}
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeDetail(); });
 
-  leafletMap = L.map('map', { preferCanvas: true }).setView([55, 5], 4);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap © CARTO', subdomains: 'abcd', maxZoom: 19
+// ── Map ───────────────────────────────────────────────────────────────────────
+function initMap(){
+  if(mapInited) return;
+  mapInited=true;
+  leafletMap = L.map('map',{preferCanvas:true}).setView([30,0],2);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+    attribution:'© OpenStreetMap © CARTO',subdomains:'abcd',maxZoom:19
   }).addTo(leafletMap);
-
   markerLayer = L.layerGroup().addTo(leafletMap);
   renderMapMarkers();
-
-  const countries = [...new Set(allData.map(d => d.country))];
-  document.getElementById('mapLegend').innerHTML =
-    countries.map(c => `<div class="legend-item"><div class="legend-dot" style="background:${countryColor(c)}"></div>${c}</div>`).join('') +
-    `<div class="legend-item" style="margin-left:auto;color:var(--muted);font-size:9px">
-      ${allData.filter(d=>d.latitude&&d.longitude).length.toLocaleString()} INSTALLATIONS WITH COORDINATES
-    </div>`;
 }
 
-function renderMapMarkers() {
-  if (!markerLayer) return;
+function renderMapMarkers(){
+  if(!markerLayer) return;
   markerLayer.clearLayers();
-  allData.filter(d => d.latitude && d.longitude).forEach(d => {
-    const col = countryColor(d.country);
-    L.circleMarker([d.latitude, d.longitude], {
-      radius: 4, fillColor: col, color: 'rgba(255,255,255,0.3)',
-      weight: 0.8, fillOpacity: 0.9
+  const pts = filtered.filter(d=>d.latitude&&d.longitude);
+  set('mapCount', pts.length.toLocaleString()+' PLOTTED');
+  pts.forEach(d=>{
+    L.circleMarker([d.latitude,d.longitude],{
+      radius:4, fillColor:fuelColor(d.fuel_type), color:'rgba(255,255,255,.2)',
+      weight:.8, fillOpacity:.85
     }).bindPopup(`
-      <div class="popup-name">${d.installation_name}</div>
-      <div class="popup-row">Country: <span>${d.country}</span></div>
-      <div class="popup-row">Type: <span>${d.installation_type || '—'}</span></div>
-      <div class="popup-row">Status: <span>${d.status || '—'}</span></div>
-      <div class="popup-row">Operator: <span>${d.operator || '—'}</span></div>
-      ${d.year_installed ? `<div class="popup-row">Installed: <span>${d.year_installed}</span></div>` : ''}
+      <div class="pu-name">${d.installation_name}</div>
+      <div class="pu-row">Country: <span>${d.country||'—'}</span></div>
+      <div class="pu-row">Status: <span>${d.status||'—'}</span></div>
+      <div class="pu-row">Fuel: <span>${d.fuel_type||'—'}</span></div>
+      <div class="pu-row">Operator: <span>${d.operator||'—'}</span></div>
+      ${d.year_production_start?`<div class="pu-row">Production start: <span>${d.year_production_start}</span></div>`:''}
     `).addTo(markerLayer);
   });
 }
 
-// ── Tab switching ────────────────────────────────────────────────────────────
-function switchTab(name) {
-  document.querySelectorAll('.tab').forEach((t,i) => {
-    t.classList.toggle('active', ['registry','collection','analytics'][i] === name);
-  });
-  ['registry','collection','analytics'].forEach(n => {
-    const el = document.getElementById('tab-' + n);
-    if (n === name) { el.classList.add('active'); el.style.display = 'flex'; }
-    else { el.classList.remove('active'); el.style.display = 'none'; }
-  });
-  if (name === 'collection') setTimeout(() => { initMap(); if (leafletMap) leafletMap.invalidateSize(); }, 80);
+// ── Analytics ─────────────────────────────────────────────────────────────────
+function buildAnalytics(){
+  // Countries bar chart
+  const byCo={};
+  filtered.forEach(d=>{ if(d.country) byCo[d.country]=(byCo[d.country]||0)+1; });
+  const topCo=Object.entries(byCo).sort((a,b)=>b[1]-a[1]).slice(0,20);
+  const maxCo=topCo[0]?.[1]||1;
+  document.getElementById('an-country').innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:5px">
+    ${topCo.map(([c,n])=>`
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:140px;font-size:11px;color:var(--text2);flex-shrink:0">${c}</div>
+        <div style="flex:1;height:16px;background:var(--border);border-radius:3px;position:relative">
+          <div style="width:${(n/maxCo*100).toFixed(0)}%;height:100%;background:#cc77ff44;border-radius:3px;border:1px solid #cc77ff66"></div>
+        </div>
+        <div style="width:50px;font-family:var(--mono);font-size:10px;color:var(--muted);text-align:right">${n.toLocaleString()}</div>
+      </div>`).join('')}
+    </div>`;
+
+  // Status
+  const bySt={};
+  filtered.forEach(d=>{ const s=d.status||'unknown'; bySt[s]=(bySt[s]||0)+1; });
+  const maxSt=Math.max(...Object.values(bySt));
+  const stColors={'operating':'#00e676','in-development':'#ffb300','discovered':'#5599ff',
+    'mothballed':'#888','decommissioning':'#ff4444','abandoned':'#884444','cancelled':'#884444','exploration':'#5599ff'};
+  document.getElementById('an-status').innerHTML=Object.entries(bySt)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([s,n])=>`<div style="background:var(--surface2);border:1px solid var(--border);border-left:2px solid ${stColors[s]||'#aaa'};border-radius:5px;padding:10px 12px">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:3px">${s}</div>
+      <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:${stColors[s]||'#aaa'}">${n.toLocaleString()}</div>
+      <div style="height:3px;background:var(--border);border-radius:2px;margin-top:6px">
+        <div style="width:${(n/maxSt*100).toFixed(0)}%;height:100%;background:${stColors[s]||'#aaa'};border-radius:2px"></div>
+      </div>
+    </div>`).join('');
+
+  // Fuel
+  const byFu={};
+  filtered.forEach(d=>{ const f=d.fuel_type||'unknown'; byFu[f]=(byFu[f]||0)+1; });
+  const maxFu=Math.max(...Object.values(byFu));
+  document.getElementById('an-fuel').innerHTML=Object.entries(byFu)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([f,n])=>`<div style="background:var(--surface2);border:1px solid var(--border);border-left:2px solid ${fuelColor(f)};border-radius:5px;padding:10px 12px">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:3px">${f}</div>
+      <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:${fuelColor(f)}">${n.toLocaleString()}</div>
+      <div style="height:3px;background:var(--border);border-radius:2px;margin-top:6px">
+        <div style="width:${(n/maxFu*100).toFixed(0)}%;height:100%;background:${fuelColor(f)};border-radius:2px"></div>
+      </div>
+    </div>`).join('');
+
+  // Operators
+  const byOp={};
+  filtered.forEach(d=>{ if(d.operator&&d.operator!=='Unknown') byOp[d.operator]=(byOp[d.operator]||0)+1; });
+  const topOp=Object.entries(byOp).sort((a,b)=>b[1]-a[1]).slice(0,20);
+  const maxOp=topOp[0]?.[1]||1;
+  document.getElementById('an-operators').innerHTML=topOp
+    .map(([op,n])=>`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:9px 12px">
+      <div style="font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px" title="${esc(op)}">${esc(op)}</div>
+      <div style="font-family:var(--mono);font-size:15px;font-weight:700;color:var(--accent)">${n.toLocaleString()}</div>
+    </div>`).join('');
 }
 
-// ── Exports ──────────────────────────────────────────────────────────────────
-function exportCSV() {
-  const cols = ['installation_name','country','region','installation_type','operator','status','year_installed','latitude','longitude','source_authority'];
-  const header = cols.join(',');
-  const rows = filtered.map(d => cols.map(c => {
-    const v = d[c] ?? '';
-    return String(v).includes(',') ? `"${v}"` : v;
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    t.classList.toggle('active',['registry','map','analytics'][i]===name);
+  });
+  ['registry','map','analytics'].forEach(n=>{
+    const el=document.getElementById('tab-'+n);
+    if(n===name){el.classList.add('active');el.style.display='flex';}
+    else{el.classList.remove('active');el.style.display='none';}
+  });
+  if(name==='map') setTimeout(()=>{ initMap(); if(leafletMap) leafletMap.invalidateSize(); },80);
+  if(name==='analytics') buildAnalytics();
+}
+
+// ── Exports ───────────────────────────────────────────────────────────────────
+function exportCSV(){
+  const cols=['installation_name','country','region','fuel_type','production_type','status',
+    'onshore_offshore','operator','year_discovered','year_production_start',
+    'basin','block','latitude','longitude','wiki_url','source_authority'];
+  const hdr=cols.join(',');
+  const rows=filtered.map(d=>cols.map(c=>{
+    const v=d[c]??'';
+    return String(v).includes(',')?`"${v}"`:v;
   }).join(','));
-  download(header + '\n' + rows.join('\n'), 'text/csv', `rig-extract_${new Date().toISOString().slice(0,10)}.csv`);
+  dl(hdr+'\n'+rows.join('\n'),'text/csv',`gem_oilgas_${new Date().toISOString().slice(0,10)}.csv`);
 }
-
-function exportJSON() {
-  download(JSON.stringify({ exported: new Date().toISOString(), count: filtered.length, inventory: filtered }, null, 2),
-    'application/json', `rig-extract_${new Date().toISOString().slice(0,10)}.json`);
+function exportJSON(){
+  dl(JSON.stringify({exported:new Date().toISOString(),count:filtered.length,inventory:filtered},null,2),
+    'application/json',`gem_oilgas_${new Date().toISOString().slice(0,10)}.json`);
 }
-
-function download(content, mime, filename) {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([content], { type: mime }));
-  a.download = filename;
-  a.click();
+function dl(content,mime,filename){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type:mime}));
+  a.download=filename; a.click();
 }
 </script>
 </body>
