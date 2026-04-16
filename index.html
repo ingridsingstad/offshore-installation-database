@@ -253,9 +253,9 @@ td{padding:8px 12px;vertical-align:middle}
       <div class="sb-field">
         <label>Data Source</label>
         <div class="toggle-group">
-          <div class="toggle-btn active" id="tog-src-all"    onclick="setDataSource('all')">All</div>
-          <div class="toggle-btn"        id="tog-src-gem"    onclick="setDataSource('gem')">Fields</div>
-          <div class="toggle-btn"        id="tog-src-sodir"  onclick="setDataSource('sodir')">Platforms</div>
+          <div class="toggle-btn active" id="tog-src-all"   onclick="setDataSource('all')">All</div>
+          <div class="toggle-btn"        id="tog-src-gem"   onclick="setDataSource('gem')">Fields</div>
+          <div class="toggle-btn"        id="tog-src-inst"  onclick="setDataSource('inst')">Platforms</div>
         </div>
       </div>
       <div class="sb-field">
@@ -487,8 +487,9 @@ fetch('gem_inventory.json')
     document.getElementById('topStatus').textContent =
       'GEM LOADED — ' + gemData.length.toLocaleString() + ' FIELDS';
     document.getElementById('footerCount').textContent = allData.length.toLocaleString();
-    // Start SODIR fetch in background
+    // Load supplementary installation datasets in parallel
     fetchSODIR();
+    fetchNWEurope();
   })
   .catch(err=>{
     document.getElementById('tab-registry').innerHTML =
@@ -583,19 +584,49 @@ async function fetchSODIR(){
 
   sodirData = rawInstallations;
   sodirLoaded = true;
-  allData = [...gemData, ...sodirData];
-
+  rebuildAllData();
   applyFilters();
 
   dot.className = 'tb-dot';
   dot.style = '';
   statusEl.style.color = '';
-  statusEl.textContent =
-    'LOADED — ' + gemData.length.toLocaleString() + ' FIELDS · ' +
-    sodirData.length.toLocaleString() + ' NCS PLATFORMS';
+  updateTopStatus();
 
   document.getElementById('sodirBadge').style.display = '';
   document.getElementById('footerCount').textContent = allData.length.toLocaleString();
+}
+
+// ── Fetch NW Europe (UK + Denmark + Netherlands) ──────────────────────────────
+let nwEuropeData = [];
+
+async function fetchNWEurope(){
+  try {
+    const r = await fetch('nw_europe_installations.json');
+    if(!r.ok) throw new Error('Not found');
+    const json = await r.json();
+    nwEuropeData = json.installations || [];
+    console.log('NW Europe: loaded', nwEuropeData.length, 'records');
+    rebuildAllData();
+    applyFilters();
+    updateTopStatus();
+    document.getElementById('footerCount').textContent = allData.length.toLocaleString();
+  } catch(e){
+    console.warn('nw_europe_installations.json not found — run fetch_nw_europe_installations.py');
+  }
+}
+
+// ── Rebuild allData from all sources ─────────────────────────────────────────
+function rebuildAllData(){
+  allData = [...gemData, ...sodirData, ...nwEuropeData];
+  buildCountryFilter();
+}
+
+function updateTopStatus(){
+  const parts = [];
+  parts.push(gemData.length.toLocaleString() + ' FIELDS');
+  if(sodirData.length) parts.push(sodirData.length.toLocaleString() + ' NCS');
+  if(nwEuropeData.length) parts.push(nwEuropeData.length.toLocaleString() + ' UK/DK/NL');
+  document.getElementById('topStatus').textContent = 'LOADED — ' + parts.join(' · ');
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
@@ -620,7 +651,8 @@ function updateStats(){
   set('sb-geo', Math.round(withCoords/Math.max(f.length,1)*100)+'%');
 
   const parts = [];
-  if(dataSourceFilter!=='all') parts.push(dataSourceFilter==='sodir'?'SODIR PLATFORMS':'GEM FIELDS');
+  if(dataSourceFilter==='gem')  parts.push('GEM FIELDS');
+  if(dataSourceFilter==='inst') parts.push('PLATFORMS');
   if(locationFilter!=='all') parts.push(locationFilter.toUpperCase());
   const st = document.getElementById('filterStatus').value;
   const fu = document.getElementById('filterFuel').value;
@@ -667,7 +699,7 @@ function setLocation(v){
 
 function setDataSource(v){
   dataSourceFilter = v;
-  ['all','gem','sodir'].forEach(x=>{
+  ['all','gem','inst'].forEach(x=>{
     document.getElementById('tog-src-'+x).classList.toggle('active', x===v);
   });
   applyFilters();
@@ -681,8 +713,8 @@ function applyFilters(){
   const pt = document.getElementById('filterProdType').value;
 
   filtered = allData.filter(d=>{
-    if(dataSourceFilter==='gem'    && d.data_type!=='field') return false;
-    if(dataSourceFilter==='sodir'  && d.data_type!=='installation') return false;
+    if(dataSourceFilter==='gem'  && d.data_type!=='field') return false;
+    if(dataSourceFilter==='inst' && d.data_type!=='installation') return false;
     if(q && !`${d.installation_name} ${d.operator} ${d.basin} ${d.block} ${d.country} ${d.region} ${d.installation_type||''}`.toLowerCase().includes(q)) return false;
     if(st && d.status !== st) return false;
     if(fu && d.fuel_type !== fu) return false;
@@ -708,7 +740,7 @@ function clearFilters(){
   locationFilter='all';
   dataSourceFilter='all';
   ['all','offshore','onshore'].forEach(x=>document.getElementById('tog-'+x).classList.toggle('active',x==='all'));
-  ['all','gem','sodir'].forEach(x=>document.getElementById('tog-src-'+x).classList.toggle('active',x==='all'));
+  ['all','gem','inst'].forEach(x=>document.getElementById('tog-src-'+x).classList.toggle('active',x==='all'));
   applyFilters();
 }
 
