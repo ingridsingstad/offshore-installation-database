@@ -503,9 +503,10 @@ fetch('gem_inventory.json')
     document.getElementById('topStatus').textContent = 'DATA NOT FOUND';
   });
 
-// ── Fetch SODIR installations (live, client-side) ─────────────────────────────
+// ── Fetch SODIR installations ─────────────────────────────────────────────────
+// Strategy: 1) try static sodir_installations.json (committed to repo, no CORS)
+//           2) fallback to live SODIR ArcGIS API (works locally, blocked on some hosts)
 async function fetchSODIR(){
-  const BASE = 'https://factmaps.sodir.no/api/rest/services/Factmaps/FactMapsWGS84/MapServer/307/query';
   const dot = document.getElementById('topDot');
   const statusEl = document.getElementById('topStatus');
 
@@ -513,79 +514,77 @@ async function fetchSODIR(){
   statusEl.style.color = 'var(--amber)';
   statusEl.textContent = 'SODIR LOADING…';
 
-  const params = {
-    where: '1=1',
-    outFields: 'fclName,fclKind,fclPhase,fclCurrentOperatorName,fclNsdFldsName,fclStartupDate,fclWaterDepth,fclFactPageUrl,fclNationalityName',
-    returnGeometry: 'true',
-    outSR: '4326',
-    f: 'json',
-    resultRecordCount: '1000'
-  };
+  let rawInstallations = null;
 
-  let offset = 0, features = [], exceeded = true;
-
+  // ── Try static JSON file first ──
   try {
-    while(exceeded){
-      const qs = new URLSearchParams({ ...params, resultOffset: String(offset) });
-      const r = await fetch(`${BASE}?${qs}`);
-      if(!r.ok) throw new Error('SODIR HTTP ' + r.status);
-      const data = await r.json();
-      if(data.error) throw new Error(data.error.message || 'SODIR API error');
-      if(!data.features || !data.features.length) break;
-      features = features.concat(data.features);
-      exceeded = data.exceededTransferLimit === true;
-      offset += data.features.length;
+    const r = await fetch('sodir_installations.json');
+    if(r.ok){
+      const json = await r.json();
+      rawInstallations = json.installations || [];
+      console.log('SODIR: loaded from static file —', rawInstallations.length, 'records');
     }
-  } catch(e){
-    console.warn('SODIR fetch failed:', e.message);
+  } catch(e){ /* not found, will try live */ }
+
+  // ── Fallback: live ArcGIS API ──
+  if(!rawInstallations){
+    const BASE = 'https://factmaps.sodir.no/api/rest/services/Factmaps/FactMapsWGS84/MapServer/307/query';
+    const params = {
+      where:'1=1',
+      outFields:'fclName,fclKind,fclPhase,fclCurrentOperatorName,fclNsdFldsName,fclStartupDate,fclWaterDepth,fclFactPageUrl',
+      returnGeometry:'true', outSR:'4326', f:'json', resultRecordCount:'1000'
+    };
+    let offset=0, features=[], exceeded=true;
+    try {
+      while(exceeded){
+        const qs = new URLSearchParams({...params, resultOffset:String(offset)});
+        const r = await fetch(`${BASE}?${qs}`);
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        const data = await r.json();
+        if(data.error) throw new Error(data.error.message||'API error');
+        if(!data.features||!data.features.length) break;
+        features = features.concat(data.features);
+        exceeded = data.exceededTransferLimit===true;
+        offset += data.features.length;
+      }
+      // Map ArcGIS features to our schema
+      rawInstallations = features.map(f=>{
+        const a=f.attributes||{}, g=f.geometry;
+        const startup=a.fclStartupDate?String(a.fclStartupDate).replace(/^(\d{4}).*/,'$1'):null;
+        return {
+          installation_name:a.fclName||'Unknown', country:'Norway',
+          region:'Norwegian Continental Shelf', fuel_type:'oil and gas',
+          production_type:null, status:normalizeSodirPhase(a.fclPhase),
+          operator:a.fclCurrentOperatorName||'Unknown', onshore_offshore:'offshore',
+          latitude:g?g.y:null, longitude:g?g.x:null,
+          year_production_start:startup?parseInt(startup):null,
+          year_discovered:null, basin:a.fclNsdFldsName||null, block:null,
+          owners:null, wiki_url:null, source_authority:'SODIR',
+          data_type:'installation', installation_type:a.fclKind||'Unknown',
+          parent_field:a.fclNsdFldsName||null, water_depth:a.fclWaterDepth||null,
+          fact_page_url:a.fclFactPageUrl||null, id:a.fclName,
+        };
+      });
+      console.log('SODIR: loaded from live API —', rawInstallations.length, 'records');
+    } catch(e){
+      console.warn('SODIR live API failed:', e.message);
+    }
+  }
+
+  // ── Both sources failed ──
+  if(!rawInstallations || !rawInstallations.length){
     dot.className = 'tb-dot';
     dot.style.background = 'var(--red)';
     dot.style.boxShadow = '0 0 5px var(--red)';
     statusEl.style.color = 'var(--text2)';
-    statusEl.textContent = 'SODIR UNAVAILABLE — ' + gemData.length.toLocaleString() + ' FIELDS';
+    statusEl.textContent = 'GEM ONLY — ' + gemData.length.toLocaleString() + ' FIELDS (run fetch_sodir_installations.py to add NCS platforms)';
     return;
   }
 
-  // Map SODIR features to shared schema
-  sodirData = features.map(f=>{
-    const a = f.attributes || {};
-    const g = f.geometry;
-    const lat = g ? g.y : null;
-    const lon = g ? g.x : null;
-    const startup = a.fclStartupDate
-      ? String(a.fclStartupDate).replace(/^(\d{4}).*/, '$1')
-      : null;
-    return {
-      installation_name: a.fclName || 'Unknown',
-      country: 'Norway',
-      region: 'Norwegian Continental Shelf',
-      fuel_type: 'oil and gas',
-      production_type: null,
-      status: normalizeSodirPhase(a.fclPhase),
-      operator: a.fclCurrentOperatorName || 'Unknown',
-      onshore_offshore: 'offshore',
-      latitude: lat,
-      longitude: lon,
-      year_production_start: startup ? parseInt(startup) : null,
-      year_discovered: null,
-      basin: a.fclNsdFldsName || null,       // parent field name
-      block: null,
-      owners: null,
-      wiki_url: null,
-      source_authority: 'SODIR',
-      data_type: 'installation',
-      installation_type: a.fclKind || 'Unknown',
-      parent_field: a.fclNsdFldsName || null,
-      water_depth: a.fclWaterDepth || null,
-      fact_page_url: a.fclFactPageUrl || null,
-      id: a.fclName,
-    };
-  });
-
+  sodirData = rawInstallations;
   sodirLoaded = true;
   allData = [...gemData, ...sodirData];
 
-  // Rebuild country filter to keep Norway (already there) — just re-render
   applyFilters();
 
   dot.className = 'tb-dot';
