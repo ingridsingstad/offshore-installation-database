@@ -370,6 +370,7 @@ td{padding:9px 14px;vertical-align:middle}
           <option value="Active">Active</option>
           <option value="Decommissioned">Decommissioned</option>
           <option value="Inactive/Decommissioned">Inactive / Decommissioned</option>
+          <option value="Planned/Under Construction">Planned / Under Construction</option>
           <option value="Unknown">Unknown</option>
         </select>
       </div>
@@ -522,11 +523,25 @@ const COUNTRY_COLORS = {
 };
 function countryColor(c){ return COUNTRY_COLORS[c] || '#00c8ff'; }
 
+// ── Status normalisation ─────────────────────────────────────────────────────
+function normalizeStatus(raw) {
+  if (!raw || raw === 'None') return 'Unknown';
+  const v = raw.toUpperCase().trim();
+  if (['IN SERVICE', 'ACTIVE', 'PRODUCING'].includes(v))             return 'Active';
+  if (['DECOMMISSIONED','REMOVED','DISPOSAL COMPLETED',
+       'ABANDONED IN PLACE','PARTLY REMOVED'].includes(v))           return 'Decommissioned';
+  if (['SHUT DOWN','LAID UP','INACTIVE'].includes(v))                return 'Inactive/Decommissioned';
+  if (['INSTALLATION','FABRICATION','FUTURE',
+       'UNDER CONSTRUCTION','PLANNED'].includes(v))                  return 'Planned/Under Construction';
+  if (v === 'UNKNOWN')                                               return 'Unknown';
+  return raw; // keep as-is if not recognised
+}
+
 // ── Load data ────────────────────────────────────────────────────────────────
 fetch('global_offshore_inventory_local.json')
   .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
   .then(json => {
-    allData = json.inventory || [];
+    allData = (json.inventory || []).map(d => ({ ...d, status: normalizeStatus(d.status) }));
     init();
   })
   .catch(err => {
@@ -825,7 +840,7 @@ function switchTab(name) {
     if (n === name) { el.classList.add('active'); el.style.display = 'flex'; }
     else { el.classList.remove('active'); el.style.display = 'none'; }
   });
-  if (name === 'collection') setTimeout(initMap, 50);
+  if (name === 'collection') setTimeout(() => { initMap(); if (leafletMap) leafletMap.invalidateSize(); }, 80);
 }
 
 // ── Exports ──────────────────────────────────────────────────────────────────
